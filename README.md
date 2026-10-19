@@ -14,14 +14,14 @@ npm run icons      # regenera los íconos de public/icons
 
 ## Editar la rutina
 
-Todo está en [`src/rutina.ts`](src/rutina.ts). Cambiá nombres, series o notas, corré `npm run build` y volvé a subir `dist/`. El teléfono toma la versión nueva la próxima vez que abras la app con conexión.
+Todo está en [`src/rutina.ts`](src/rutina.ts). Cambiá nombres, series o notas, hacé commit y push a `main`: el workflow de GitHub Actions compila y publica solo. El teléfono toma la versión nueva la próxima vez que abras la app con conexión.
 
 ## Pasarla al iPhone
 
-iOS solo activa el service worker (modo offline) si la página viene por **HTTPS**, así que hay que subir `dist/` una vez a algún hosting estático gratuito. Después de instalarla funciona sin internet.
+iOS solo activa el service worker (modo offline) si la página viene por **HTTPS**; por eso se publica en GitHub Pages. Después de instalarla funciona sin internet.
 
-1. Subí la carpeta `dist/` a GitHub Pages, Netlify o Cloudflare Pages.
-2. Abrí la URL en el iPhone, con Safari o Chrome.
+1. En el repo de GitHub: *Settings → Pages → Source: GitHub Actions*.
+2. Push a `main` y abrí en el iPhone la URL de Pages (`https://<usuario>.github.io/<repo>/`), con Safari o Chrome.
 3. **Safari:** botón Compartir → *Agregar a pantalla de inicio*.
    **Chrome:** botón Compartir (arriba a la derecha) → *Agregar a pantalla de inicio*.
 4. Abrí la app desde el ícono: va en pantalla completa, sin barra del navegador.
