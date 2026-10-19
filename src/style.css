@@ -1,0 +1,385 @@
+/* ── Tokens ─────────────────────────────────────────────── */
+
+:root {
+  --acento: #ff5a1f;
+  --cabecera-bg: #111111;
+  --cabecera-texto: #ffffff;
+  --cabecera-tenue: #9a9a9a;
+  --cabecera-borde: #2a2a2a;
+
+  --fondo: #f1f1ef;
+  --tarjeta: #ffffff;
+  --texto: #111111;
+  --tenue: #6b6b6b;
+  --borde: #e1e1de;
+  --hecho-fondo: #e9e9e6;
+  --hecho-texto: #a3a3a0;
+}
+
+[data-bs-theme='dark'] {
+  --cabecera-bg: #000000;
+  --cabecera-borde: #1f1f1f;
+
+  --fondo: #0d0d0d;
+  --tarjeta: #1a1a1a;
+  --texto: #f3f3f3;
+  --tenue: #9b9b9b;
+  --borde: #2a2a2a;
+  --hecho-fondo: #121212;
+  --hecho-texto: #5c5c5c;
+}
+
+/* ── Base ───────────────────────────────────────────────── */
+
+html {
+  font-size: 17px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--fondo);
+  color: var(--texto);
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.container {
+  max-width: 640px;
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+
+svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Cabecera ───────────────────────────────────────────── */
+
+.cabecera {
+  background: var(--cabecera-bg);
+  color: var(--cabecera-texto);
+  padding-top: calc(env(safe-area-inset-top) + 12px);
+  border-bottom: 1px solid var(--cabecera-borde);
+}
+
+.cabecera-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+}
+
+.etiqueta {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cabecera-tenue);
+}
+
+.btn-cabecera {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--cabecera-borde);
+  border-radius: 999px;
+  background: #1c1c1c;
+  color: var(--cabecera-texto);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.btn-cabecera:hover,
+.btn-cabecera:active,
+.btn-cabecera:focus-visible {
+  background: #2a2a2a;
+  color: var(--cabecera-texto);
+  border-color: #3a3a3a;
+}
+
+.btn-tema svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-tema .relleno {
+  fill: currentColor;
+  stroke: none;
+}
+
+.dia-nombre {
+  margin: 8px 0 2px;
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.dia-grupo {
+  margin: 0 0 16px;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.dia-nota {
+  color: var(--cabecera-tenue);
+  font-weight: 500;
+}
+
+.progreso-texto {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+}
+
+.progreso-texto strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.porcentaje {
+  color: var(--cabecera-tenue);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.completo {
+  color: var(--acento);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.9rem;
+}
+
+.cabecera .progress {
+  height: 10px;
+  border-radius: 999px;
+  background: #2b2b2b;
+}
+
+.cabecera .progress-bar {
+  background: var(--cabecera-texto);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.cabecera .progress-bar.lleno {
+  background: var(--acento);
+}
+
+/* Selector de días */
+
+.dias {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding-top: 18px;
+  padding-bottom: 14px;
+}
+
+.dia-btn {
+  position: relative;
+  height: 48px;
+  border: 1px solid var(--cabecera-borde);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--cabecera-texto);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.dia-btn.activo {
+  background: var(--cabecera-texto);
+  border-color: var(--cabecera-texto);
+  color: var(--cabecera-bg);
+}
+
+/* Punto naranja debajo del día de hoy */
+.dia-btn.es-hoy::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: var(--acento);
+}
+
+/* Día terminado: letra tachada */
+.dia-btn.hecho {
+  color: var(--cabecera-tenue);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.dia-btn.activo.hecho {
+  color: #777;
+}
+
+/* ── Lista de ejercicios ────────────────────────────────── */
+
+.contenido {
+  padding-top: 16px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 32px);
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ejercicio {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 76px;
+  padding: 14px 14px 14px 18px;
+  border: 1px solid var(--borde);
+  border-radius: 16px;
+  background: var(--tarjeta);
+  color: var(--texto);
+  text-align: left;
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.ejercicio:active {
+  transform: scale(0.985);
+}
+
+.ejercicio-texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ejercicio-nombre {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.ejercicio-detalle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
+  row-gap: 4px;
+}
+
+.series {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--acento);
+  font-variant-numeric: tabular-nums;
+}
+
+.nota {
+  font-size: 0.9rem;
+  color: var(--tenue);
+  line-height: 1.3;
+}
+
+.check {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 2.5px solid var(--borde);
+  border-radius: 50%;
+  color: transparent;
+}
+
+.check svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 3;
+}
+
+/* Completado: tachado y en gris */
+.ejercicio.hecho {
+  background: var(--hecho-fondo);
+  border-color: transparent;
+}
+
+.ejercicio.hecho .ejercicio-nombre,
+.ejercicio.hecho .series,
+.ejercicio.hecho .nota {
+  color: var(--hecho-texto);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.ejercicio.hecho .check {
+  background: var(--hecho-texto);
+  border-color: var(--hecho-texto);
+  color: var(--tarjeta);
+}
+
+.btn-limpiar {
+  margin-top: 20px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  color: var(--tenue);
+  font-weight: 600;
+}
+
+/* ── Descanso ───────────────────────────────────────────── */
+
+.descanso {
+  margin-top: 8px;
+  padding: 40px 24px;
+  border: 1px solid var(--borde);
+  border-radius: 20px;
+  background: var(--tarjeta);
+  text-align: center;
+}
+
+.descanso svg {
+  width: 64px;
+  height: 64px;
+  color: var(--acento);
+  stroke-width: 2.5;
+}
+
+.descanso h2 {
+  margin: 16px 0 8px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.descanso p {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--tenue);
+}
