@@ -1,8 +1,9 @@
 // Implementación de los repositorios sobre IndexedDB.
 
-import type { Ejercicio, NuevaSerie, Respaldo, ResumenSesion, Serie, Sesion } from '../modelos';
+import type { DatosGuardados, Ejercicio, NuevaSerie, ResumenSesion, Serie, Sesion } from '../modelos';
 import type {
   EjercicioRepository,
+  PreferenciasRepository,
   Repositorios,
   RespaldoRepository,
   SerieRepository,
@@ -102,30 +103,38 @@ class SerieRepositoryIDB implements SerieRepository {
 class RespaldoRepositoryIDB implements RespaldoRepository {
   constructor(private readonly db: IDBDatabase) {}
 
-  async exportar(): Promise<Respaldo> {
+  async exportar(): Promise<DatosGuardados> {
     const tx = this.db.transaction(Object.values(STORES), 'readonly');
     const [ejercicios, sesiones, series] = await Promise.all([
       resultado(tx.objectStore(STORES.ejercicios).getAll()),
       resultado(tx.objectStore(STORES.sesiones).getAll()),
       resultado(tx.objectStore(STORES.series).getAll()),
     ]);
-    return { app: 'rutina-gym', version: 1, exportado: new Date().toISOString(), ejercicios, sesiones, series };
+    return { ejercicios, sesiones, series };
   }
 
-  async importar(respaldo: Respaldo): Promise<void> {
+  async importar(datos: DatosGuardados): Promise<void> {
     // Una sola transacción: o se reemplaza todo, o no cambia nada.
     const tx = this.db.transaction(Object.values(STORES), 'readwrite');
-    const grupos: [string, unknown[]][] = [
-      [STORES.ejercicios, respaldo.ejercicios],
-      [STORES.sesiones, respaldo.sesiones],
-      [STORES.series, respaldo.series],
-    ];
-    for (const [nombre, items] of grupos) {
-      const store = tx.objectStore(nombre);
-      store.clear();
-      for (const item of items) store.put(item);
+    const fin = terminada(tx);
+    try {
+      const grupos: [string, unknown[]][] = [
+        [STORES.ejercicios, datos.ejercicios],
+        [STORES.sesiones, datos.sesiones],
+        [STORES.series, datos.series],
+      ];
+      for (const [nombre, items] of grupos) {
+        const store = tx.objectStore(nombre);
+        store.clear();
+        for (const item of items) store.put(item);
+      }
+    } catch (error) {
+      // Un registro inválido tira acá: se cancela todo, incluido el clear().
+      tx.abort();
+      await fin.catch(() => undefined);
+      throw error;
     }
-    await terminada(tx);
+    await fin;
   }
 
   async contar(): Promise<{ sesiones: number; series: number }> {
@@ -138,12 +147,16 @@ class RespaldoRepositoryIDB implements RespaldoRepository {
   }
 }
 
-export async function crearRepositoriosIDB(nombreDB?: string): Promise<Repositorios> {
+export async function crearRepositoriosIDB(
+  preferencias: PreferenciasRepository,
+  nombreDB?: string,
+): Promise<Repositorios> {
   const db = await abrirDB(nombreDB);
   return {
     ejercicios: new EjercicioRepositoryIDB(db),
     sesiones: new SesionRepositoryIDB(db),
     series: new SerieRepositoryIDB(db),
     respaldo: new RespaldoRepositoryIDB(db),
+    preferencias,
   };
 }

@@ -8,6 +8,7 @@
 import type { Animo, Repositorios, Serie, Sesion, Tecnica } from '../datos';
 import { RUTINA } from '../rutina';
 import { fechaTexto, lunesDe, sumarDias } from '../util/fechas';
+import { siguienteNumero } from './estadisticas';
 
 export interface Semana {
   lunes: string;
@@ -17,6 +18,18 @@ export interface Semana {
 /** La sesión tiene algo registrado (si no, no cuenta como entrenamiento). */
 export function tieneActividad(sesion: Sesion, cantidadSeries = 0): boolean {
   return cantidadSeries > 0 || sesion.completados.length > 0;
+}
+
+/** Lo que necesita el modal para cargar una serie. */
+export interface EstadoDeCarga {
+  sesionId?: string;
+  /** Todas las series del ejercicio (incluidas las de hoy). */
+  historial: Serie[];
+  /** Las de la sesión de esta semana, en orden. */
+  deHoy: Serie[];
+  /** Serie que corresponde cargar ahora. */
+  numero: number;
+  completado: boolean;
 }
 
 export class Entrenamiento {
@@ -59,18 +72,31 @@ export class Entrenamiento {
     return series.filter((s) => s.ejercicioId === ejercicioId);
   }
 
+  async estadoDeCarga(dia: number, ejercicioId: string, hoy = new Date()): Promise<EstadoDeCarga> {
+    const sesion = this.sesionDelDia(await this.semana(hoy), dia);
+    const historial = await this.repos.series.obtenerHistorial(ejercicioId);
+    const deHoy = historial.filter((s) => s.sesionId === sesion?.id).sort((a, b) => a.numero - b.numero);
+    return {
+      sesionId: sesion?.id,
+      historial,
+      deHoy,
+      numero: siguienteNumero(deHoy),
+      completado: sesion?.completados.includes(ejercicioId) ?? false,
+    };
+  }
+
   async guardarSerie(dia: number, ejercicioId: string, peso: number, reps: number, hoy = new Date()) {
     const sesion = await this.asegurarSesion(dia, hoy);
-    const previas = await this.seriesDe(sesion.id, ejercicioId);
+    const numero = siguienteNumero(await this.seriesDe(sesion.id, ejercicioId));
     const serie = await this.repos.series.guardarSerie({
       sesionId: sesion.id,
       ejercicioId,
-      numero: previas.length + 1,
+      numero,
       peso,
       reps,
       fecha: fechaTexto(hoy),
     });
-    return { serie, sesion, cantidad: previas.length + 1 };
+    return { serie, sesion, cantidad: numero };
   }
 
   /** Borra la última serie cargada de un ejercicio. Si estaba terminado, vuelve a abrirse. */

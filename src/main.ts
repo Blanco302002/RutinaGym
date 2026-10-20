@@ -1,4 +1,5 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
+import 'virtual:temas-color.css';
 import './style.css';
 
 import { crearRepositorios } from './datos';
@@ -6,6 +7,7 @@ import { catalogoDeRutina, validarRutina } from './dominio/catalogo';
 import { Entrenamiento } from './dominio/entrenamiento';
 import { migrarDesdeLocalStorage } from './dominio/migracion';
 import { aplicarTema, seguirSistema } from './tema';
+import { aplicarColor } from './ui/colorApp';
 import type { Contexto } from './ui/contexto';
 import { crearBarraNavegacion } from './ui/navbar';
 import { alCambiarRuta, destinoDe, leerRuta, type Ruta } from './ui/router';
@@ -27,6 +29,7 @@ const barra = crearBarraNavegacion(app);
 
 async function iniciar(): Promise<void> {
   const repos = await crearRepositorios();
+  aplicarColor(repos.preferencias.obtener().color);
   await repos.ejercicios.sincronizar(catalogoDeRutina());
   await migrarDesdeLocalStorage(repos);
   // Pide que el sistema no borre los datos si falta espacio.

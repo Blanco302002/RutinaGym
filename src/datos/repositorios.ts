@@ -3,7 +3,7 @@
 // que implementarlas de nuevo (ej. con fetch a una API) y cambiar ./index.ts.
 // Todo es async a propósito: así una implementación remota encaja igual.
 
-import type { Ejercicio, NuevaSerie, Respaldo, ResumenSesion, Serie, Sesion } from './modelos';
+import type { DatosGuardados, Ejercicio, NuevaSerie, Preferencias, ResumenSesion, Serie, Sesion } from './modelos';
 
 export interface EjercicioRepository {
   /** Agrega los ejercicios nuevos y actualiza el nombre de los existentes. */
@@ -32,10 +32,19 @@ export interface SerieRepository {
 }
 
 export interface RespaldoRepository {
-  exportar(): Promise<Respaldo>;
-  /** Reemplaza todos los datos por los del respaldo. */
-  importar(respaldo: Respaldo): Promise<void>;
+  exportar(): Promise<DatosGuardados>;
+  /** Reemplaza todos los datos. Si algo falla, no cambia nada. */
+  importar(datos: DatosGuardados): Promise<void>;
   contar(): Promise<{ sesiones: number; series: number }>;
+}
+
+/**
+ * Preferencias del teléfono. Síncrono a propósito: se leen antes de
+ * dibujar la primera pantalla (para no parpadear con otro color).
+ */
+export interface PreferenciasRepository {
+  obtener(): Preferencias;
+  guardar(cambios: Partial<Preferencias>): void;
 }
 
 export interface Repositorios {
@@ -43,4 +52,5 @@ export interface Repositorios {
   sesiones: SesionRepository;
   series: SerieRepository;
   respaldo: RespaldoRepository;
+  preferencias: PreferenciasRepository;
 }

@@ -1,7 +1,7 @@
 // Historial: pestañas Sesiones y Ejercicios.
 
 import type { Ejercicio, ResumenSesion, Sesion } from '../datos';
-import { DIAS_DE_ENTRENAMIENTO, diasDeEjercicio } from '../dominio/catalogo';
+import { DIAS_DE_ENTRENAMIENTO } from '../dominio/catalogo';
 import { tieneActividad } from '../dominio/entrenamiento';
 import { RUTINA } from '../rutina';
 import { fechaLarga, lunesDe } from '../util/fechas';
@@ -71,19 +71,15 @@ function renderEjercicios(ejercicios: Ejercicio[]): string {
   const q = normalizar(busqueda.trim());
   const filtrados = ejercicios.filter((e) => !q || normalizar(e.nombre).includes(q));
   const filas = filtrados
-    .map((e) => {
-      const dias = diasDeEjercicio(e.id);
-      return `
+    .map(
+      (e) => `
         <li>
-          <a class="fila-link" href="#/ejercicio/${encodeURIComponent(e.id)}">
-            <span class="fila-link-texto">
-              <span class="fila-link-titulo">${escapar(e.nombre)}</span>
-              <span class="fila-link-sub">${dias.length ? dias.join(' · ') : 'Ya no está en la rutina'}</span>
-            </span>
+          <a class="fila-link fila-link--simple" href="#/ejercicio/${encodeURIComponent(e.id)}">
+            <span class="fila-link-titulo">${escapar(e.nombre)}</span>
             ${icono('arrowRight', 'fila-link-flecha')}
           </a>
-        </li>`;
-    })
+        </li>`,
+    )
     .join('');
   return filas ? `<ul class="lista">${filas}</ul>` : vacio('Sin resultados', `Ningún ejercicio coincide con "${busqueda}".`);
 }

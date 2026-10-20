@@ -31,6 +31,11 @@ export function mejorSerie(series: Serie[]): Serie | undefined {
   return series.reduce<Serie | undefined>((mejor, s) => (!mejor || esMejor(s, mejor) ? s : mejor), undefined);
 }
 
+/** Número de la próxima serie: una más que la última cargada en la sesión. */
+export function siguienteNumero(seriesDeLaSesion: Pick<Serie, 'numero'>[]): number {
+  return seriesDeLaSesion.reduce((max, s) => Math.max(max, s.numero), 0) + 1;
+}
+
 export function volumen(series: Serie[]): number {
   return series.reduce((total, s) => total + s.peso * s.reps, 0);
 }

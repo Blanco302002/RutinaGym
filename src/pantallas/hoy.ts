@@ -35,9 +35,10 @@ function renderCabecera(semana: Semana, sesion: Sesion | undefined, hoy: Date): 
   const lleno = total > 0 && hechos === total;
   const porcentaje = total ? Math.round((hechos / total) * 100) : 0;
 
-  const progreso = dia.descanso
-    ? ''
-    : `
+  // En descanso no hay progreso, pero se reserva el lugar para que la
+  // cabecera mida siempre lo mismo.
+  const progreso = `
+    <div class="progreso ${dia.descanso ? 'invisible' : ''}" ${dia.descanso ? 'aria-hidden="true"' : ''}>
       <div class="progreso-texto">
         <span><strong>${hechos}</strong> / ${total} completados</span>
         ${lleno ? '<span class="completo">Día completo</span>' : `<span class="porcentaje">${porcentaje}%</span>`}
@@ -45,17 +46,20 @@ function renderCabecera(semana: Semana, sesion: Sesion | undefined, hoy: Date): 
       <div class="progress" role="progressbar" aria-label="Progreso del día"
            aria-valuenow="${hechos}" aria-valuemin="0" aria-valuemax="${total}">
         <div class="progress-bar ${lleno ? 'lleno' : ''}" style="width: ${porcentaje}%"></div>
-      </div>`;
+      </div>
+    </div>`;
 
   return `
-    <header class="cabecera" data-zona="dias">
-      <div class="container">
+    <header class="cabecera cabecera--hoy" data-zona="dias">
+      <div class="container cabecera-info">
         <div class="cabecera-fila">
           <span class="etiqueta">${esHoy ? `Hoy · ${etiquetaFecha}` : etiquetaFecha}</span>
           ${esHoy ? '' : '<button type="button" class="btn btn-cabecera" data-accion="hoy">Volver a hoy</button>'}
         </div>
         <h1 class="dia-nombre">${escapar(dia.nombre)}</h1>
-        <p class="dia-grupo">${escapar(dia.grupo)}${dia.nota ? `<span class="dia-nota"> · ${escapar(dia.nota)}</span>` : ''}</p>
+        <p class="dia-grupo dia-grupo--una-linea" title="${escapar(dia.nota ? `${dia.grupo} · ${dia.nota}` : dia.grupo)}">${escapar(dia.grupo)}${
+          dia.nota ? `<span class="dia-nota"> · ${escapar(dia.nota)}</span>` : ''
+        }</p>
         ${progreso}
       </div>
       <nav class="container dias" aria-label="Días de la semana">

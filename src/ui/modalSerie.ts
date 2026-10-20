@@ -2,6 +2,7 @@
 
 import type { Serie, Tecnica } from '../datos';
 import { llevaSeries, objetivo, repsMinimas } from '../dominio/catalogo';
+import type { EstadoDeCarga } from '../dominio/entrenamiento';
 import { precarga, resumenEjercicio } from '../dominio/estadisticas';
 import type { EjercicioDeRutina } from '../rutina';
 import { fechaCorta } from '../util/fechas';
@@ -53,19 +54,14 @@ export function abrirModalSerie(op: OpcionesModal): void {
   }
 
   async function cargar(): Promise<void> {
-    const semana = await ctx.entrenamiento.semana();
-    const sesion = ctx.entrenamiento.sesionDelDia(semana, dia);
-    sesionId = sesion?.id;
-    const historial = await ctx.repos.series.obtenerHistorial(ejercicio.id);
-    const deHoy = historial.filter((s) => s.sesionId === sesion?.id).sort((a, b) => a.numero - b.numero);
-    const completado = sesion?.completados.includes(ejercicio.id) ?? false;
-
+    const estado = await ctx.entrenamiento.estadoDeCarga(dia, ejercicio.id);
+    sesionId = estado.sesionId;
     // Ya cargó todas las series pero no calificó: directo a la técnica.
-    if (!completado && deHoy.length >= total) {
+    if (!estado.completado && estado.deHoy.length >= total) {
       dibujarTecnica();
       return;
     }
-    dibujarCarga(historial, deHoy, completado);
+    dibujarCarga(estado);
   }
 
   function encabezado(): string {
@@ -81,9 +77,8 @@ export function abrirModalSerie(op: OpcionesModal): void {
         ${ejercicio.nota ? `<span class="nota">${escapar(ejercicio.nota)}</span>` : ''}</p>`;
   }
 
-  function dibujarCarga(historial: Serie[], deHoy: Serie[], completado: boolean): void {
+  function dibujarCarga({ historial, deHoy, completado, numero: numeroSerie }: EstadoDeCarga): void {
     const resumen = resumenEjercicio(historial, sesionId);
-    const numeroSerie = deHoy.length + 1;
     const valores = precarga(historial, sesionId, numeroSerie, repsMinimas(ejercicio.reps) ?? 10);
     const extra = numeroSerie > total;
 

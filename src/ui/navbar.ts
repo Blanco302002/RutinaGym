@@ -32,7 +32,6 @@ export function crearBarraNavegacion(contenedor: HTMLElement): BarraNavegacion {
       <a href="${item.href}" class="barra-nav__item ${item.destino === 'hoy' ? 'barra-nav__item--central' : ''}"
          data-destino="${item.destino}" aria-label="${item.etiqueta}">
         <span class="barra-nav__icono">${icono(item.icono)}</span>
-        <span class="barra-nav__etiqueta">${item.etiqueta}</span>
       </a>`,
   ).join('');
   contenedor.append(nav);

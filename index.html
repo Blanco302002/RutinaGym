@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" data-bs-theme="light">
+<html lang="es" data-bs-theme="light" data-tema="azul">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -17,13 +17,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="format-detection" content="telephone=no" />
 
-    <!-- Aplica el tema antes de pintar para que no parpadee. -->
+    <!-- Aplica modo claro/oscuro y color antes de pintar para que no parpadee.
+         El color se valida después en main.ts (src/ui/colorApp.ts). -->
     <script>
       (function () {
-        var t = null;
-        try { t = localStorage.getItem('rutina:tema'); } catch (e) {}
+        var t = null, c = null;
+        try { t = localStorage.getItem('rutina:tema'); c = localStorage.getItem('rutina:color'); } catch (e) {}
         var oscuro = t === 'oscuro' || (t !== 'claro' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.setAttribute('data-bs-theme', oscuro ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-tema', /^[a-z]+$/.test(c || '') ? c : 'azul');
       })();
     </script>
   </head>

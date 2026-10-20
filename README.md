@@ -7,7 +7,7 @@ PWA de rutina de gimnasio: TypeScript + Vite + Bootstrap, sin backend. Registra 
 ```bash
 npm install        # una vez
 npm run dev        # desarrollo en http://localhost:5173 (sin service worker)
-npm test           # tests de dominio y repositorios
+npm test           # tests de lógica (Vitest, corren en Node)
 npm run build      # tipos + tests + genera dist/ (la app lista para instalar)
 npm run preview    # sirve dist/ en http://localhost:4173
 npm run icons      # regenera los íconos de public/icons
@@ -16,6 +16,10 @@ npm run icons      # regenera los íconos de public/icons
 ## Editar la rutina
 
 Todo está en [`src/rutina.ts`](src/rutina.ts). Cambiá nombres, series o notas (no cambies el `id` de un ejercicio si querés conservar su historial), hacé commit y push a `main`: el workflow de GitHub Actions compila y publica solo. El teléfono toma la versión nueva la próxima vez que abras la app con conexión.
+
+## Colores de la app
+
+Los 6 temas (Azul, Verde, Morado, Rojo, Naranja, Marrón) están en [`src/temas-color.ts`](src/temas-color.ts). Para agregar o ajustar uno, editá esa lista: al compilar se convierte en CSS y aparece solo en Ajustes. Hay un test que verifica que cada color tenga buen contraste en modo claro y oscuro.
 
 ## Pasarla al iPhone
 
@@ -41,6 +45,7 @@ iOS solo activa el service worker (modo offline) si la página viene por **HTTPS
 | `src/pantallas/` | Hoy, Historial, Sesión, Evolución, Ajustes |
 | `src/ui/` | Barra de navegación, router, modal de series, stepper, íconos |
 | `src/sw.template.js` | Service worker (el build lo completa con la lista de archivos) |
-| `tests/` | Tests con Vitest (+ fake-indexeddb) |
+| `src/temas-color.ts` | Temas de color (único lugar donde se definen) |
+| `tests/` | Tests con Vitest + fake-indexeddb: reinicio semanal, respaldo, frases, repositorios, colores |
 
 El resto de la app solo usa las interfaces de `src/datos/repositorios.ts`. Un backend futuro implementa esas mismas interfaces (por ejemplo con `fetch`) y se cambia `crearRepositorios()` en `src/datos/index.ts`.

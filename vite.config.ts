@@ -2,6 +2,7 @@ import { defineConfig, type Plugin } from 'vite';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { cssDeTemas } from './src/temas-color';
 
 const PUBLIC_DIR = resolve(import.meta.dirname, 'public');
 
@@ -50,8 +51,22 @@ function serviceWorker(): Plugin {
   };
 }
 
+/** Convierte src/temas-color.ts en CSS (import 'virtual:temas-color.css'). */
+function temasDeColor(): Plugin {
+  const ID = 'virtual:temas-color.css';
+  return {
+    name: 'rutina-temas-color',
+    resolveId: (id) => (id === ID ? ID : undefined),
+    load(id) {
+      if (id !== ID) return;
+      this.addWatchFile(resolve(import.meta.dirname, 'src/temas-color.ts'));
+      return cssDeTemas();
+    },
+  };
+}
+
 export default defineConfig({
   // Rutas relativas: funciona igual en la raíz de un dominio o en una subcarpeta.
   base: './',
-  plugins: [serviceWorker()],
+  plugins: [temasDeColor(), serviceWorker()],
 });

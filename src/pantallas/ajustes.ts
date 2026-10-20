@@ -1,10 +1,11 @@
 // Ajustes: tema y respaldo de datos (exportar / importar JSON).
 
-import { catalogoDeRutina } from '../dominio/catalogo';
-import { validarRespaldo } from '../dominio/respaldo';
+import { crearRespaldo, leerRespaldo, restaurarRespaldo } from '../dominio/respaldo';
 import { elegirTema, temaActual, type Tema } from '../tema';
+import { TEMAS_COLOR } from '../temas-color';
 import { fechaTexto } from '../util/fechas';
 import { plural } from '../util/formato';
+import { aplicarColor } from '../ui/colorApp';
 import { cabecera } from '../ui/componentes';
 import type { Contexto, Pantalla } from '../ui/contexto';
 import { icono, type NombreIcono } from '../ui/iconos';
@@ -18,7 +19,7 @@ const TEMAS: [Tema, string, NombreIcono][] = [
 let mensaje: { texto: string; error?: boolean } | undefined;
 
 async function crearArchivoRespaldo(ctx: Contexto): Promise<File> {
-  const respaldo = await ctx.repos.respaldo.exportar();
+  const respaldo = await crearRespaldo(ctx.repos);
   const nombre = `rutina-respaldo-${fechaTexto(new Date())}.json`;
   return new File([JSON.stringify(respaldo, null, 2)], nombre, { type: 'application/json' });
 }
@@ -44,14 +45,7 @@ function exportar(archivo: File): void {
 }
 
 async function importar(ctx: Contexto, archivo: File): Promise<void> {
-  let datos: unknown;
-  try {
-    datos = JSON.parse(await archivo.text());
-  } catch {
-    mensaje = { texto: 'No se pudo leer el archivo: no es un JSON válido.', error: true };
-    return;
-  }
-  const respaldo = validarRespaldo(datos);
+  const respaldo = leerRespaldo(await archivo.text());
   if (typeof respaldo === 'string') {
     mensaje = { texto: respaldo, error: true };
     return;
@@ -66,8 +60,13 @@ async function importar(ctx: Contexto, archivo: File): Promise<void> {
     );
     if (!ok) return;
   }
-  await ctx.repos.respaldo.importar(respaldo);
-  await ctx.repos.ejercicios.sincronizar(catalogoDeRutina());
+  try {
+    await restaurarRespaldo(ctx.repos, respaldo);
+  } catch {
+    mensaje = { texto: 'No se pudo importar. Tus datos quedaron como estaban.', error: true };
+    return;
+  }
+  aplicarColor(ctx.repos.preferencias.obtener().color);
   mensaje = {
     texto: `Listo: importadas ${plural(respaldo.sesiones.length, 'sesión', 'sesiones')} y ${plural(respaldo.series.length, 'serie')}.`,
   };
@@ -76,6 +75,7 @@ async function importar(ctx: Contexto, archivo: File): Promise<void> {
 export const pantallaAjustes: Pantalla = async (contenedor, ctx) => {
   const [{ sesiones, series }, archivo] = await Promise.all([ctx.repos.respaldo.contar(), crearArchivoRespaldo(ctx)]);
   const tema = temaActual();
+  const color = ctx.repos.preferencias.obtener().color;
 
   contenedor.innerHTML = `
     ${cabecera({ titulo: 'Ajustes', etiqueta: 'Rutina' })}
@@ -86,7 +86,21 @@ export const pantallaAjustes: Pantalla = async (contenedor, ctx) => {
           ${TEMAS.map(
             ([valor, texto, ic]) => `
             <button type="button" role="radio" class="segmento ${tema === valor ? 'activo' : ''}"
-                    aria-checked="${tema === valor}" data-tema="${valor}">${icono(ic)}<span>${texto}</span></button>`,
+                    aria-checked="${tema === valor}" data-tema-modo="${valor}">${icono(ic)}<span>${texto}</span></button>`,
+          ).join('')}
+        </div>
+      </section>
+
+      <section class="ajuste">
+        <h2 class="seccion-titulo">Color de la app</h2>
+        <div class="colores" role="radiogroup" aria-label="Color de la app">
+          ${TEMAS_COLOR.map(
+            (t) => `
+            <button type="button" role="radio" class="color-opcion ${color === t.id ? 'activo' : ''}"
+                    aria-checked="${color === t.id}" data-color="${t.id}">
+              <span class="color-muestra" data-tema="${t.id}">${icono('check')}</span>
+              <span>${t.nombre}</span>
+            </button>`,
           ).join('')}
         </div>
       </section>
@@ -115,10 +129,14 @@ export const pantallaAjustes: Pantalla = async (contenedor, ctx) => {
   });
 
   contenedor.addEventListener('click', (e) => {
-    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-accion], [data-tema]');
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-accion], [data-tema-modo], [data-color]');
     if (!el) return;
-    if (el.dataset.tema) {
-      elegirTema(el.dataset.tema as Tema);
+    if (el.dataset.color) {
+      ctx.repos.preferencias.guardar({ color: el.dataset.color });
+      aplicarColor(el.dataset.color);
+      ctx.refrescar();
+    } else if (el.dataset.temaModo) {
+      elegirTema(el.dataset.temaModo as Tema);
       ctx.refrescar();
     } else if (el.dataset.accion === 'exportar') {
       exportar(archivo);

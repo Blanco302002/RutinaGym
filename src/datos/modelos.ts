@@ -50,12 +50,24 @@ export interface ResumenSesion {
   ejercicios: string[];
 }
 
-/** Archivo de respaldo (Exportar / Importar). */
-export interface Respaldo {
-  app: 'rutina-gym';
-  version: 1;
-  exportado: string;
+/** Preferencias del teléfono (no son datos de entrenamiento). */
+export interface Preferencias {
+  /** Id del tema de color (ver src/temas-color.ts). */
+  color: string;
+}
+
+/** Datos de entrenamiento que guarda la base. */
+export interface DatosGuardados {
   ejercicios: Ejercicio[];
   sesiones: Sesion[];
   series: Serie[];
+}
+
+/** Archivo de respaldo (Exportar / Importar). */
+export interface Respaldo extends DatosGuardados {
+  app: 'rutina-gym';
+  version: 1;
+  exportado: string;
+  /** Opcional: los respaldos viejos no lo tienen. */
+  preferencias?: Partial<Preferencias>;
 }
