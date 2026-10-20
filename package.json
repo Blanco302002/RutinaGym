@@ -5,16 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vitest run && vite build",
     "preview": "vite preview --host",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "bootstrap": "^5.3.8"
   },
   "devDependencies": {
+    "fake-indexeddb": "^6.2.6",
     "sharp": "^0.35.5",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   }
 }

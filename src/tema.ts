@@ -4,7 +4,6 @@
 export type Tema = 'auto' | 'claro' | 'oscuro';
 
 const CLAVE = 'rutina:tema';
-const ORDEN: Tema[] = ['auto', 'oscuro', 'claro'];
 const sistemaOscuro = window.matchMedia('(prefers-color-scheme: dark)');
 
 function leerTema(): Tema {
@@ -28,15 +27,14 @@ export function aplicarTema(): void {
   document.documentElement.setAttribute('data-bs-theme', oscuro ? 'dark' : 'light');
 }
 
-export function siguienteTema(): Tema {
-  actual = ORDEN[(ORDEN.indexOf(actual) + 1) % ORDEN.length];
+export function elegirTema(tema: Tema): void {
+  actual = tema;
   try {
     localStorage.setItem(CLAVE, actual);
   } catch {
     // Sin persistencia: el cambio vale hasta cerrar la app.
   }
   aplicarTema();
-  return actual;
 }
 
 /** En modo auto, acompaña los cambios de claro/oscuro del sistema. */
