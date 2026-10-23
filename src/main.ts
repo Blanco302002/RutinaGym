@@ -6,6 +6,7 @@ import { crearRepositorios } from './datos';
 import { catalogoDeRutina, validarRutina } from './dominio/catalogo';
 import { Entrenamiento } from './dominio/entrenamiento';
 import { migrarDesdeLocalStorage } from './dominio/migracion';
+import { iniciarDiagnostico } from './diagnostico'; // TEMPORAL
 import { aplicarTema, seguirSistema } from './tema';
 import { crearCarrusel } from './ui/carrusel';
 import { aplicarColor } from './ui/colorApp';
@@ -146,6 +147,7 @@ async function iniciar(): Promise<void> {
 
   barra.marcarActivo(ITEMS[indiceInicial].destino);
   await renderizar(indiceInicial, hashInicial);
+  iniciarDiagnostico(); // TEMPORAL
   ITEMS.forEach((item, i) => {
     if (i !== indiceInicial) void renderizar(i, item.href);
   });
@@ -168,5 +170,12 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (habiaVersion && !document.body.classList.contains('modal-abierto')) window.location.reload();
   });
-  navigator.serviceWorker.register('./sw.js');
+  // updateViaCache 'none': el iPhone siempre pide sw.js nuevo (sin caché HTTP), así
+  // detecta enseguida cada versión publicada.
+  void navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((registro) => {
+    // Al volver a la app, buscar versión nueva (la app instalada casi nunca se recarga).
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') void registro.update().catch(() => undefined);
+    });
+  });
 }

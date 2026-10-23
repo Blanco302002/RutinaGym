@@ -139,7 +139,7 @@ svg,
   top: 0;
   left: 0;
   right: 0;
-  height: 100dvh;
+  height: var(--alto-app, 100dvh); /* --alto-app: solo lo usa el diagnóstico temporal */
 }
 
 .carrusel {

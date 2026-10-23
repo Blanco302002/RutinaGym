@@ -60,11 +60,15 @@ function porOrden(a: Serie, b: Serie): number {
   return a.fecha.localeCompare(b.fecha) || a.creada - b.creada || a.numero - b.numero;
 }
 
+let ultimaCreada = 0;
+
 class SerieRepositoryIDB implements SerieRepository {
   constructor(private readonly db: IDBDatabase) {}
 
   async guardarSerie(nueva: NuevaSerie): Promise<Serie> {
-    const serie: Serie = { ...nueva, id: crypto.randomUUID(), creada: Date.now() };
+    // Siempre creciente, aunque se guarden dos en el mismo milisegundo: define el orden.
+    ultimaCreada = Math.max(Date.now(), ultimaCreada + 1);
+    const serie: Serie = { ...nueva, id: crypto.randomUUID(), creada: ultimaCreada };
     const tx = this.db.transaction(STORES.series, 'readwrite');
     tx.objectStore(STORES.series).put(serie);
     await terminada(tx);
@@ -91,6 +95,7 @@ class SerieRepositoryIDB implements SerieRepository {
 
   async resumenPorSesion(): Promise<Record<string, ResumenSesion>> {
     const series: Serie[] = await resultado(leer(this.db, STORES.series).getAll());
+    series.sort(porOrden); // ejercicios en el orden en que se cargaron (no el de los ids)
     const resumen: Record<string, ResumenSesion> = {};
     for (const s of series) {
       const r = (resumen[s.sesionId] ??= { series: 0, ejercicios: [] });
