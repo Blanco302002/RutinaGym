@@ -2,6 +2,7 @@
 
 import type { DatosGuardados, Ejercicio, NuevaSerie, ResumenSesion, Serie, Sesion } from '../modelos';
 import type {
+  CronometroRepository,
   EjercicioRepository,
   PreferenciasRepository,
   Repositorios,
@@ -147,16 +148,19 @@ class RespaldoRepositoryIDB implements RespaldoRepository {
   }
 }
 
-export async function crearRepositoriosIDB(
-  preferencias: PreferenciasRepository,
-  nombreDB?: string,
-): Promise<Repositorios> {
+/** Lo que no va en IndexedDB porque se lee de forma síncrona (localStorage). */
+export interface DatosDelTelefono {
+  preferencias: PreferenciasRepository;
+  cronometro: CronometroRepository;
+}
+
+export async function crearRepositoriosIDB(telefono: DatosDelTelefono, nombreDB?: string): Promise<Repositorios> {
   const db = await abrirDB(nombreDB);
   return {
     ejercicios: new EjercicioRepositoryIDB(db),
     sesiones: new SesionRepositoryIDB(db),
     series: new SerieRepositoryIDB(db),
     respaldo: new RespaldoRepositoryIDB(db),
-    preferencias,
+    ...telefono,
   };
 }

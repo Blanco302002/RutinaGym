@@ -19,7 +19,7 @@ Todo está en [`src/rutina.ts`](src/rutina.ts). Cambiá nombres, series o notas 
 
 ## Colores de la app
 
-Los 6 temas (Azul, Verde, Morado, Rojo, Naranja, Marrón) están en [`src/temas-color.ts`](src/temas-color.ts). Para agregar o ajustar uno, editá esa lista: al compilar se convierte en CSS y aparece solo en Ajustes. Hay un test que verifica que cada color tenga buen contraste en modo claro y oscuro.
+Los temas (Azul marino y Rojo) están en [`src/temas-color.ts`](src/temas-color.ts). Para agregar o ajustar uno, editá esa lista: al compilar se convierte en CSS y aparece solo en Ajustes. Hay un test que verifica que cada color tenga buen contraste en modo claro y oscuro.
 
 ## Pasarla al iPhone
 
@@ -41,11 +41,11 @@ iOS solo activa el service worker (modo offline) si la página viene por **HTTPS
 | `src/datos/` | Modelos (`Ejercicio`, `Sesion`, `Serie`) e interfaces de repositorios |
 | `src/datos/indexeddb/` | Implementación de los repositorios con IndexedDB |
 | `src/datos/index.ts` | Elige la implementación (para un backend, cambiar solo acá) |
-| `src/dominio/` | Reglas: sesión de la semana, estadísticas, frases de progreso, respaldo |
-| `src/pantallas/` | Hoy, Historial, Sesión, Evolución, Ajustes |
-| `src/ui/` | Barra de navegación, router, modal de series, stepper, íconos |
+| `src/dominio/` | Reglas: sesión de la semana, estadísticas, frases de progreso, respaldo, cronómetro |
+| `src/pantallas/` | Rutina (hoy), Historial, Sesión, Evolución, Cronómetro, Ajustes |
+| `src/ui/` | Barra de navegación, deslizar entre pantallas, router, modal de series, stepper, íconos |
 | `src/sw.template.js` | Service worker (el build lo completa con la lista de archivos) |
 | `src/temas-color.ts` | Temas de color (único lugar donde se definen) |
-| `tests/` | Tests con Vitest + fake-indexeddb: reinicio semanal, respaldo, frases, repositorios, colores |
+| `tests/` | Tests con Vitest + fake-indexeddb: reinicio semanal, respaldo, frases, repositorios, colores, cronómetro |
 
 El resto de la app solo usa las interfaces de `src/datos/repositorios.ts`. Un backend futuro implementa esas mismas interfaces (por ejemplo con `fetch`) y se cambia `crearRepositorios()` en `src/datos/index.ts`.

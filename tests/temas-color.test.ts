@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TEMAS_COLOR, conOpacidad, cssDeTemas, esColorValido } from '../src/temas-color';
+import { COLOR_POR_DEFECTO, TEMAS_COLOR, conOpacidad, cssDeTemas, esColorValido } from '../src/temas-color';
 
 /** Contraste WCAG entre dos colores hex. */
 function contraste(a: string, b: string): number {
@@ -18,9 +18,11 @@ function contraste(a: string, b: string): number {
 const FONDO_CLARO = '#f1f1ef';
 const TARJETA_OSCURA = '#1a1a1a';
 const FONDO_OSCURO = '#0d0d0d';
+const PILDORA_CLARA = '#ebebef';
+const PILDORA_OSCURA = '#3a3a3c';
 
 describe('Temas de color', () => {
-  it.each(TEMAS_COLOR)('$nombre: el ícono blanco sobre el botón central se lee bien', (tema) => {
+  it.each(TEMAS_COLOR)('$nombre: el contenido blanco sobre el acento se lee bien', (tema) => {
     expect(contraste('#ffffff', tema.claro.acento)).toBeGreaterThanOrEqual(4.5);
   });
 
@@ -28,13 +30,23 @@ describe('Temas de color', () => {
     expect(contraste(tema.claro.oscuro, FONDO_CLARO)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(TEMAS_COLOR)('$nombre: el texto acentuado se lee bien en modo oscuro', (tema) => {
+  it.each(TEMAS_COLOR)('$nombre: el texto acentuado y las agujas se leen bien en modo oscuro', (tema) => {
     expect(contraste(tema.oscuro.acento, TARJETA_OSCURA)).toBeGreaterThanOrEqual(4.5);
     expect(contraste(tema.oscuro.acento, FONDO_OSCURO)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('hay 6 temas y el azul es el primero (por defecto)', () => {
-    expect(TEMAS_COLOR.map((t) => t.id)).toEqual(['azul', 'verde', 'morado', 'rojo', 'naranja', 'marron']);
+  it.each(TEMAS_COLOR)('$nombre: las agujas se leen bien sobre el fondo claro', (tema) => {
+    expect(contraste(tema.claro.acento, FONDO_CLARO)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(TEMAS_COLOR)('$nombre: el ícono activo se distingue sobre la píldora de la barra', (tema) => {
+    expect(contraste(tema.claro.oscuro, PILDORA_CLARA)).toBeGreaterThanOrEqual(3);
+    expect(contraste(tema.oscuro.acento, PILDORA_OSCURA)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('hay dos temas: Azul marino (por defecto) y Rojo', () => {
+    expect(TEMAS_COLOR.map((t) => t.id)).toEqual(['marino', 'rojo']);
+    expect(COLOR_POR_DEFECTO).toBe('marino');
   });
 
   it('el CSS generado tiene una regla clara y una oscura por tema', () => {
@@ -48,11 +60,13 @@ describe('Temas de color', () => {
   });
 
   it('el suave de modo oscuro es el acento luminoso al 15%', () => {
-    expect(conOpacidad('#60A5FA', 0.15)).toBe('rgba(96, 165, 250, 0.15)');
+    expect(conOpacidad('#5B8DEF', 0.15)).toBe('rgba(91, 141, 239, 0.15)');
   });
 
   it('solo acepta ids de temas que existen', () => {
-    expect(esColorValido('verde')).toBe(true);
+    expect(esColorValido('marino')).toBe(true);
+    expect(esColorValido('rojo')).toBe(true);
+    expect(esColorValido('marron')).toBe(false); // tema eliminado
     expect(esColorValido('fucsia')).toBe(false);
     expect(esColorValido(undefined)).toBe(false);
   });

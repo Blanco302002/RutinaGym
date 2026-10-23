@@ -3,7 +3,7 @@
 import 'fake-indexeddb/auto';
 import type { Serie } from '../src/datos/modelos';
 import { crearRepositoriosIDB } from '../src/datos/indexeddb/repositorios';
-import { PreferenciasEnMemoria } from '../src/datos/preferencias';
+import { CronometroEnMemoria, PreferenciasEnMemoria } from '../src/datos/preferencias';
 import { catalogoDeRutina } from '../src/dominio/catalogo';
 import { Entrenamiento } from '../src/dominio/entrenamiento';
 
@@ -11,7 +11,10 @@ let contadorDB = 0;
 
 /** Repositorios sobre una base nueva, sin entrenamientos (como la app recién instalada). */
 export async function baseVacia() {
-  const repos = await crearRepositoriosIDB(new PreferenciasEnMemoria(), `test-${contadorDB++}`);
+  const repos = await crearRepositoriosIDB(
+    { preferencias: new PreferenciasEnMemoria(), cronometro: new CronometroEnMemoria() },
+    `test-${contadorDB++}`,
+  );
   await repos.ejercicios.sincronizar(catalogoDeRutina()); // igual que al abrir la app
   return { repos, entrenamiento: new Entrenamiento(repos) };
 }
@@ -27,4 +30,19 @@ let contadorSerie = 0;
 export function serie(sesionId: string, fecha: string, numero: number, peso: number, reps: number): Serie {
   contadorSerie++;
   return { id: `s${contadorSerie}`, sesionId, ejercicioId: 'press_plano', numero, peso, reps, fecha, creada: contadorSerie };
+}
+
+/** localStorage falso (en Node no hay): un Map con la misma interfaz. */
+export function localStorageFalso(inicial: Record<string, string> = {}): Storage {
+  const datos = new Map(Object.entries(inicial));
+  return {
+    get length() {
+      return datos.size;
+    },
+    clear: () => datos.clear(),
+    getItem: (k) => datos.get(k) ?? null,
+    key: (i) => [...datos.keys()][i] ?? null,
+    removeItem: (k) => void datos.delete(k),
+    setItem: (k, v) => void datos.set(k, String(v)),
+  };
 }

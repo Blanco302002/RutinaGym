@@ -220,24 +220,8 @@ function conectar(contenedor: HTMLElement, ctx: Contexto): void {
     }
   });
 
-  // Deslizar la cabecera a los costados: cambiar de día.
-  const cabecera = contenedor.querySelector<HTMLElement>('[data-zona="dias"]')!;
-  let x0 = 0;
-  let y0 = 0;
-  cabecera.addEventListener('touchstart', (e) => ([x0, y0] = [e.touches[0].clientX, e.touches[0].clientY]), {
-    passive: true,
-  });
-  cabecera.addEventListener(
-    'touchend',
-    (e) => {
-      const dx = e.changedTouches[0].clientX - x0;
-      const dy = e.changedTouches[0].clientY - y0;
-      if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) irADia(ctx, seleccionado + (dx < 0 ? 1 : -1));
-    },
-    { passive: true },
-  );
-
   // Deslizar un ejercicio hacia la derecha: abrir la carga de series.
+  // (Cualquier otro deslizamiento lo maneja main.ts: cambia de pantalla.)
   for (const fila of contenedor.querySelectorAll<HTMLElement>('.fila--deslizable')) {
     const tarjeta = fila.querySelector<HTMLElement>('.ejercicio')!;
     let inicioX = 0;

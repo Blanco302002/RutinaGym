@@ -3,6 +3,7 @@
 // que implementarlas de nuevo (ej. con fetch a una API) y cambiar ./index.ts.
 // Todo es async a propósito: así una implementación remota encaja igual.
 
+import type { EstadoCronometro } from '../dominio/cronometro';
 import type { DatosGuardados, Ejercicio, NuevaSerie, Preferencias, ResumenSesion, Serie, Sesion } from './modelos';
 
 export interface EjercicioRepository {
@@ -47,10 +48,17 @@ export interface PreferenciasRepository {
   guardar(cambios: Partial<Preferencias>): void;
 }
 
+/** Estado del cronómetro: sobrevive a cerrar y volver a abrir la app. */
+export interface CronometroRepository {
+  obtener(): EstadoCronometro;
+  guardar(estado: EstadoCronometro): void;
+}
+
 export interface Repositorios {
   ejercicios: EjercicioRepository;
   sesiones: SesionRepository;
   series: SerieRepository;
   respaldo: RespaldoRepository;
   preferencias: PreferenciasRepository;
+  cronometro: CronometroRepository;
 }

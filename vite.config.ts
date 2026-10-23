@@ -2,7 +2,7 @@ import { defineConfig, type Plugin } from 'vite';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { cssDeTemas } from './src/temas-color';
+import { COLOR_POR_DEFECTO, TEMAS_COLOR, cssDeTemas } from './src/temas-color';
 
 const PUBLIC_DIR = resolve(import.meta.dirname, 'public');
 
@@ -51,11 +51,18 @@ function serviceWorker(): Plugin {
   };
 }
 
-/** Convierte src/temas-color.ts en CSS (import 'virtual:temas-color.css'). */
+/**
+ * Convierte src/temas-color.ts en CSS (import 'virtual:temas-color.css') y
+ * completa en index.html la lista de colores válidos y el de por defecto.
+ */
 function temasDeColor(): Plugin {
   const ID = 'virtual:temas-color.css';
   return {
     name: 'rutina-temas-color',
+    transformIndexHtml: (html) =>
+      html
+        .replaceAll('__COLORES__', JSON.stringify(TEMAS_COLOR.map((t) => t.id)))
+        .replaceAll('__COLOR_POR_DEFECTO__', COLOR_POR_DEFECTO),
     resolveId: (id) => (id === ID ? ID : undefined),
     load(id) {
       if (id !== ID) return;

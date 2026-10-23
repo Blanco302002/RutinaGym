@@ -1,29 +1,28 @@
 /* ── Barra de navegación inferior ───────────────────────────
    Todo lo ajustable está en estas variables. El acento (--acento-*)
-   y --fondo vienen de style.css y del tema de color. */
+   viene del tema de color. */
 
 :root {
-  --nav-alto: 60px;
+  --nav-alto: 64px;
   --nav-margen: 16px;
+  --nav-relleno: 6px; /* espacio entre el borde de la barra y la píldora de selección */
   --nav-separacion-inferior: max(16px, calc(env(safe-area-inset-bottom) + 4px));
   --nav-radio: 999px;
   --nav-bg: #ffffff;
+  --nav-seleccion: #ebebef;
   --nav-borde: rgba(0, 0, 0, 0.06);
   --nav-sombra: 0 8px 28px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
   --nav-inactivo: #6e6e73;
   --nav-icono: 28px;
-  --nav-item: 64px; /* ancho de cada ítem: los tres iguales para repartir parejo */
-  --nav-boton: 64px;
-  --nav-boton-icono: 30px;
-  --nav-anillo: 6px;
-  --nav-transicion: 180ms ease;
+  --nav-transicion: 250ms ease-out;
 
-  /* Lo que tiene que dejar libre el contenido abajo: barra + mitad del botón + margen. */
-  --nav-espacio: calc(var(--nav-separacion-inferior) + var(--nav-alto) + var(--nav-boton) / 2 + 12px);
+  /* Lo que tiene que dejar libre el contenido abajo: barra + margen. */
+  --nav-espacio: calc(var(--nav-separacion-inferior) + var(--nav-alto) + 20px);
 }
 
 [data-bs-theme='dark'] {
   --nav-bg: #1c1c1e;
+  --nav-seleccion: #3a3a3c;
   --nav-borde: rgba(255, 255, 255, 0.06);
   --nav-sombra: 0 8px 28px rgba(0, 0, 0, 0.6);
   --nav-inactivo: #98989d;
@@ -38,10 +37,8 @@
   max-width: 480px;
   margin: 0 auto;
   height: var(--nav-alto);
+  padding: var(--nav-relleno);
   display: flex;
-  align-items: center;
-  /* Mismo espacio entre borde, laterales y botón central. */
-  justify-content: space-evenly;
   border: 1px solid var(--nav-borde);
   border-radius: var(--nav-radio);
   background: var(--nav-bg);
@@ -53,97 +50,59 @@
 
 /* Con el modal de carga abierto, la barra se va. */
 .modal-abierto .barra-nav {
-  transform: translateY(calc(100% + var(--nav-separacion-inferior) + var(--nav-boton)));
+  transform: translateY(calc(100% + var(--nav-separacion-inferior) + 8px));
   opacity: 0;
   pointer-events: none;
 }
 
+/* Píldora que marca la pantalla actual: ocupa un cuarto y se desliza. */
+.barra-nav__seleccion {
+  position: absolute;
+  top: var(--nav-relleno);
+  bottom: var(--nav-relleno);
+  left: var(--nav-relleno);
+  width: calc((100% - 2 * var(--nav-relleno)) / var(--nav-cantidad));
+  border-radius: var(--nav-radio);
+  background: var(--nav-seleccion);
+  transform: translateX(calc(var(--nav-indice, 1) * 100%));
+  transition: transform var(--nav-transicion);
+}
+
 .barra-nav__item {
-  position: relative;
-  flex: 0 0 var(--nav-item);
-  height: 100%;
+  position: relative; /* por encima de la píldora */
+  flex: 1;
+  min-width: 48px;
   min-height: 48px;
   display: grid;
   place-items: center;
+  border-radius: var(--nav-radio);
   color: var(--nav-inactivo);
-  text-decoration: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
-  transition: color var(--nav-transicion);
-}
-
-.barra-nav__icono {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
   transition:
-    background-color var(--nav-transicion),
-    transform var(--nav-transicion);
+    color var(--nav-transicion),
+    transform 120ms ease;
 }
 
-.barra-nav__icono .icono {
+.barra-nav__item .icono {
   width: var(--nav-icono);
   height: var(--nav-icono);
   stroke-width: 1.75;
 }
 
-.barra-nav__item:active .barra-nav__icono {
-  transform: scale(0.95);
-}
-
-/* Lateral activo: acento + círculo suave detrás del ícono. */
 .barra-nav__item.activo {
   color: var(--acento-texto);
 }
 
-.barra-nav__item.activo .barra-nav__icono {
-  background: var(--acento-suave);
-}
-
-/* ── Botón central ─────────────────────────────────────── */
-
-.barra-nav__item--central .barra-nav__icono {
-  position: absolute;
-  top: calc(var(--nav-boton) / -2);
-  left: 50%;
-  width: var(--nav-boton);
-  height: var(--nav-boton);
-  margin-left: calc(var(--nav-boton) / -2);
-  background: var(--acento-relleno);
-  color: var(--sobre-acento);
-  /* Anillo del color de la página: simula el recorte en la barra. */
-  box-shadow:
-    0 0 0 var(--nav-anillo) var(--fondo),
-    0 6px 18px color-mix(in srgb, var(--acento-relleno) 40%, transparent);
-}
-
-.barra-nav__item--central .barra-nav__icono .icono {
-  width: var(--nav-boton-icono);
-  height: var(--nav-boton-icono);
-  stroke-width: 2;
-}
-
-.barra-nav__item--central.activo .barra-nav__icono {
-  background: var(--acento-relleno);
-  transform: scale(1.05);
-  box-shadow:
-    0 0 0 var(--nav-anillo) var(--fondo),
-    0 0 0 calc(var(--nav-anillo) + 2px) var(--acento-suave-fuerte),
-    0 8px 22px color-mix(in srgb, var(--acento-relleno) 50%, transparent);
-}
-
-.barra-nav__item--central:active .barra-nav__icono {
+.barra-nav__item:active {
   transform: scale(0.95);
-  background: var(--acento-oscuro);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .barra-nav,
-  .barra-nav__item,
-  .barra-nav__icono {
+  .barra-nav__seleccion,
+  .barra-nav__item {
     transition: none;
   }
 }

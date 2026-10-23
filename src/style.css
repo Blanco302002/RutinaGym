@@ -9,13 +9,13 @@
      --acento-relleno      fondo con contenido blanco encima
      --acento-cabecera     acento sobre la cabecera negra
    Registrados para que el cambio de color se anime solo (200ms). */
-@property --acento { syntax: '<color>'; inherits: true; initial-value: #2563eb; }
-@property --acento-oscuro { syntax: '<color>'; inherits: true; initial-value: #1d4ed8; }
+@property --acento { syntax: '<color>'; inherits: true; initial-value: #1e3a8a; }
+@property --acento-oscuro { syntax: '<color>'; inherits: true; initial-value: #172554; }
 @property --acento-suave { syntax: '<color>'; inherits: true; initial-value: #dbeafe; }
-@property --acento-suave-fuerte { syntax: '<color>'; inherits: true; initial-value: rgba(37, 99, 235, 0.35); }
-@property --acento-texto { syntax: '<color>'; inherits: true; initial-value: #1d4ed8; }
-@property --acento-relleno { syntax: '<color>'; inherits: true; initial-value: #2563eb; }
-@property --acento-cabecera { syntax: '<color>'; inherits: true; initial-value: #60a5fa; }
+@property --acento-suave-fuerte { syntax: '<color>'; inherits: true; initial-value: rgba(30, 58, 138, 0.35); }
+@property --acento-texto { syntax: '<color>'; inherits: true; initial-value: #172554; }
+@property --acento-relleno { syntax: '<color>'; inherits: true; initial-value: #1e3a8a; }
+@property --acento-cabecera { syntax: '<color>'; inherits: true; initial-value: #5b8def; }
 
 :root {
   transition:
@@ -116,6 +116,12 @@ svg,
   width: 1.2em;
   height: 1.2em;
   flex: none;
+}
+
+.vista {
+  position: relative;
+  /* Las pantallas entran y salen de costado sin generar scroll horizontal. */
+  overflow-x: clip;
 }
 
 .pantalla--entrando {
@@ -349,55 +355,46 @@ svg,
 
 /* Pestañas (Historial) */
 
-/* Selector de color */
+/* Selector de color: solo los círculos, centrados. */
 
 .colores {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.color-opcion {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-height: 96px;
   justify-content: center;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  background: var(--tarjeta);
-  color: var(--texto);
-  font-weight: 700;
-}
-
-.color-opcion.activo {
-  border-color: var(--acento-suave-fuerte);
+  gap: 32px;
+  padding: 12px 0;
 }
 
 /* Cada muestra tiene su propio data-tema: toma los colores de ese tema. */
 .color-muestra {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
   background: var(--acento-relleno);
   color: transparent;
-  transition: box-shadow 200ms ease;
+  transition:
+    box-shadow 200ms ease,
+    transform 120ms ease;
+}
+
+.color-muestra:active {
+  transform: scale(0.95);
 }
 
 .color-muestra .icono {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   stroke-width: 3;
 }
 
-.color-opcion.activo .color-muestra {
+.color-muestra.activo {
   color: var(--sobre-acento);
   box-shadow:
-    0 0 0 3px var(--tarjeta),
-    0 0 0 6px var(--acento);
+    0 0 0 4px var(--fondo),
+    0 0 0 7px var(--acento);
 }
 
 .pestanas {

@@ -3,11 +3,14 @@
 
 import type { Repositorios } from './repositorios';
 import { crearRepositoriosIDB } from './indexeddb/repositorios';
-import { PreferenciasLocalStorage } from './preferencias';
+import { CronometroLocalStorage, PreferenciasLocalStorage } from './preferencias';
 
 export type { Repositorios } from './repositorios';
 export * from './modelos';
 
 export function crearRepositorios(): Promise<Repositorios> {
-  return crearRepositoriosIDB(new PreferenciasLocalStorage());
+  return crearRepositoriosIDB({
+    preferencias: new PreferenciasLocalStorage(),
+    cronometro: new CronometroLocalStorage(),
+  });
 }

@@ -1,7 +1,8 @@
 // ─────────────────────────────────────────────────────────────
 //  COLORES DE LA APP
 //  Único lugar donde se definen los temas de color. Para agregar uno,
-//  sumá un objeto a la lista: aparece solo en Ajustes.
+//  sumá un objeto a la lista: aparece solo en Ajustes (y en index.html,
+//  que valida el color guardado antes de pintar).
 //
 //  claro.acento   → color principal en modo claro
 //  claro.oscuro   → estado presionado (y texto acentuado en modo claro)
@@ -9,7 +10,7 @@
 //  oscuro.acento  → versión luminosa para modo oscuro (texto y estados
 //                   activos; su "suave" es este color al 15%)
 //
-//  Los rellenos con contenido blanco (botón central, botón Guardar) usan
+//  Los rellenos con contenido blanco (botón Guardar, muestras de color) usan
 //  siempre claro.acento, también en modo oscuro: la versión luminosa con
 //  blanco encima no tiene contraste suficiente.
 //
@@ -26,44 +27,21 @@ export interface TemaColor {
 
 export const TEMAS_COLOR: TemaColor[] = [
   {
-    id: 'azul',
-    nombre: 'Azul',
-    claro: { acento: '#2563EB', oscuro: '#1D4ED8', suave: '#DBEAFE' },
-    oscuro: { acento: '#60A5FA' },
-  },
-  {
-    id: 'verde',
-    nombre: 'Verde',
-    claro: { acento: '#15803D', oscuro: '#166534', suave: '#DCFCE7' },
-    oscuro: { acento: '#4ADE80' },
-  },
-  {
-    id: 'morado',
-    nombre: 'Morado',
-    claro: { acento: '#7C3AED', oscuro: '#6D28D9', suave: '#EDE9FE' },
-    oscuro: { acento: '#A78BFA' },
+    id: 'marino',
+    nombre: 'Azul marino',
+    claro: { acento: '#1E3A8A', oscuro: '#172554', suave: '#DBEAFE' },
+    oscuro: { acento: '#5B8DEF' },
   },
   {
     id: 'rojo',
     nombre: 'Rojo',
-    claro: { acento: '#DC2626', oscuro: '#B91C1C', suave: '#FEE2E2' },
+    claro: { acento: '#B91C1C', oscuro: '#991B1B', suave: '#FEE2E2' },
     oscuro: { acento: '#F87171' },
-  },
-  {
-    id: 'naranja',
-    nombre: 'Naranja',
-    claro: { acento: '#C2410C', oscuro: '#9A3412', suave: '#FFEDD5' },
-    oscuro: { acento: '#FB923C' },
-  },
-  {
-    id: 'marron',
-    nombre: 'Marrón',
-    claro: { acento: '#92400E', oscuro: '#78350F', suave: '#FEF3C7' },
-    oscuro: { acento: '#D6A77A' },
   },
 ];
 
-export const COLOR_POR_DEFECTO = 'azul';
+/** El primero de la lista. Si el guardado ya no existe (ej. "marron"), se usa este. */
+export const COLOR_POR_DEFECTO = 'marino';
 
 export function esColorValido(id: unknown): id is string {
   return typeof id === 'string' && TEMAS_COLOR.some((t) => t.id === id);

@@ -11,7 +11,7 @@ async function cargarDatosDeEjemplo() {
   const { sesion } = await entrenamiento.guardarSerie(0, 'press_plano', 62.5, 6, dia(2026, 10, 19));
   await entrenamiento.calificar(sesion.id, 'press_plano', 'dudosa');
   await entrenamiento.alternarCompletado(0, 'cinta', dia(2026, 10, 19));
-  repos.preferencias.guardar({ color: 'verde' });
+  repos.preferencias.guardar({ color: 'rojo' });
   return base;
 }
 
@@ -36,7 +36,7 @@ describe('Exportar e importar', () => {
     expect(sesion.animo).toBe(4);
     expect(sesion.tecnica).toEqual({ press_plano: 'dudosa' });
     expect(sesion.completados).toEqual(['press_plano', 'cinta']);
-    expect(destino.preferencias.obtener().color).toBe('verde');
+    expect(destino.preferencias.obtener().color).toBe('rojo');
   });
 
   it('importar reemplaza los datos que había', async () => {
@@ -89,20 +89,19 @@ describe('Exportar e importar', () => {
     const { repos: origen } = await cargarDatosDeEjemplo();
     const { preferencias: _, ...sinPreferencias } = await crearRespaldo(origen);
 
-    const { repos: destino } = await baseVacia();
-    destino.preferencias.guardar({ color: 'rojo' });
+    const { repos: destino } = await baseVacia(); // en Azul marino; el origen estaba en Rojo
     await restaurarRespaldo(destino, sinPreferencias);
 
-    expect(destino.preferencias.obtener().color).toBe('rojo');
+    expect(destino.preferencias.obtener().color).toBe('marino');
   });
 
-  it('un color que no existe en el respaldo se ignora', async () => {
+  it('un color que ya no existe en el respaldo (ej. marrón) se ignora', async () => {
     const { repos: origen } = await cargarDatosDeEjemplo();
-    const respaldo = { ...(await crearRespaldo(origen)), preferencias: { color: 'fucsia' } };
+    const respaldo = { ...(await crearRespaldo(origen)), preferencias: { color: 'marron' } };
 
     const { repos: destino } = await baseVacia();
     await restaurarRespaldo(destino, respaldo);
 
-    expect(destino.preferencias.obtener().color).toBe('azul');
+    expect(destino.preferencias.obtener().color).toBe('marino');
   });
 });

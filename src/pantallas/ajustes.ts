@@ -96,11 +96,9 @@ export const pantallaAjustes: Pantalla = async (contenedor, ctx) => {
         <div class="colores" role="radiogroup" aria-label="Color de la app">
           ${TEMAS_COLOR.map(
             (t) => `
-            <button type="button" role="radio" class="color-opcion ${color === t.id ? 'activo' : ''}"
-                    aria-checked="${color === t.id}" data-color="${t.id}">
-              <span class="color-muestra" data-tema="${t.id}">${icono('check')}</span>
-              <span>${t.nombre}</span>
-            </button>`,
+            <button type="button" role="radio" class="color-muestra ${color === t.id ? 'activo' : ''}"
+                    data-tema="${t.id}" data-color="${t.id}" aria-checked="${color === t.id}"
+                    aria-label="${t.nombre}">${icono('check')}</button>`,
           ).join('')}
         </div>
       </section>

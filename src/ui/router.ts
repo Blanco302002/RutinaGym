@@ -8,6 +8,7 @@ export type Ruta =
   | { pantalla: 'historial'; pestana: 'sesiones' | 'ejercicios' }
   | { pantalla: 'sesion'; id: string }
   | { pantalla: 'ejercicio'; id: string }
+  | { pantalla: 'cronometro' }
   | { pantalla: 'ajustes' };
 
 export function leerRuta(hash = location.hash): Ruta {
@@ -20,6 +21,8 @@ export function leerRuta(hash = location.hash): Ruta {
       return id ? { pantalla: 'sesion', id } : { pantalla: 'historial', pestana: 'sesiones' };
     case 'ejercicio':
       return id ? { pantalla: 'ejercicio', id } : { pantalla: 'historial', pestana: 'ejercicios' };
+    case 'cronometro':
+      return { pantalla: 'cronometro' };
     case 'ajustes':
       return { pantalla: 'ajustes' };
     default:
@@ -29,8 +32,8 @@ export function leerRuta(hash = location.hash): Ruta {
 
 /** Qué ícono de la barra se ilumina en cada pantalla. */
 export function destinoDe(ruta: Ruta): Destino {
-  if (ruta.pantalla === 'hoy' || ruta.pantalla === 'ajustes') return ruta.pantalla;
-  return 'historial';
+  if (ruta.pantalla === 'hoy' || ruta.pantalla === 'cronometro' || ruta.pantalla === 'ajustes') return ruta.pantalla;
+  return 'historial'; // también el detalle de sesión y la evolución
 }
 
 // Pila propia para saber si "volver" tiene adónde ir (en la app instalada no
