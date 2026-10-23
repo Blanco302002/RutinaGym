@@ -63,14 +63,19 @@ async function iniciar(): Promise<void> {
   const rutaDePanel = ITEMS.map((item) => item.href);
   const turnos = ITEMS.map(() => 0);
 
-  const barra = crearBarraNavegacion(app, (destino) => {
+  // Marco de 100dvh con el carrusel y la barra adentro: llegan hasta el borde inferior.
+  const marco = document.createElement('div');
+  marco.className = 'app-marco';
+  app.append(marco);
+
+  const barra = crearBarraNavegacion(marco, (destino) => {
     const i = indiceDe(destino);
     // Tocar el ícono de la pantalla actual vuelve a su inicio (ej. del detalle a la lista).
     if (i === carrusel.indice()) navegar(ITEMS[i].href, { reemplazar: true });
     else navegar(rutaDePanel[i], { reemplazar: true });
   });
 
-  const carrusel = crearCarrusel(app, {
+  const carrusel = crearCarrusel(marco, {
     cantidad: ITEMS.length,
     inicial: indiceInicial,
     alMover: (posicion, animado) => barra.posicionar(posicion, animado),

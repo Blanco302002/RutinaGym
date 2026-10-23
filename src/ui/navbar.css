@@ -6,7 +6,8 @@
   --nav-alto: 64px;
   --nav-margen: 16px;
   --nav-relleno: 6px; /* espacio entre el borde de la barra y la píldora de selección */
-  --nav-separacion-inferior: max(16px, calc(env(safe-area-inset-bottom) + 4px));
+  /* Justo encima del indicador de inicio del iPhone (el safe area se aplica solo acá). */
+  --nav-separacion-inferior: calc(env(safe-area-inset-bottom) + 8px);
   --nav-radio: 999px;
   --nav-bg: #ffffff;
   --nav-seleccion: #ebebef;
@@ -16,7 +17,7 @@
   --nav-icono: 28px;
   --nav-transicion: 250ms cubic-bezier(0.25, 0.8, 0.35, 1); /* igual que el carrusel */
 
-  /* Lo que tiene que dejar libre el contenido abajo: barra + margen. */
+  /* Padding inferior del contenido scrolleable (no del contenedor): barra + margen. */
   --nav-espacio: calc(var(--nav-separacion-inferior) + var(--nav-alto) + 20px);
 }
 
@@ -29,7 +30,8 @@
 }
 
 .barra-nav {
-  position: fixed;
+  /* Fija abajo: va dentro de .app-marco (100dvh), que no se mueve. */
+  position: absolute;
   z-index: 1030;
   left: max(var(--nav-margen), env(safe-area-inset-left));
   right: max(var(--nav-margen), env(safe-area-inset-right));
