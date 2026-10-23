@@ -14,7 +14,7 @@
   --nav-sombra: 0 8px 28px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
   --nav-inactivo: #6e6e73;
   --nav-icono: 28px;
-  --nav-transicion: 250ms ease-out;
+  --nav-transicion: 250ms cubic-bezier(0.25, 0.8, 0.35, 1); /* igual que el carrusel */
 
   /* Lo que tiene que dejar libre el contenido abajo: barra + margen. */
   --nav-espacio: calc(var(--nav-separacion-inferior) + var(--nav-alto) + 20px);

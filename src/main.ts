@@ -7,9 +7,9 @@ import { catalogoDeRutina, validarRutina } from './dominio/catalogo';
 import { Entrenamiento } from './dominio/entrenamiento';
 import { migrarDesdeLocalStorage } from './dominio/migracion';
 import { aplicarTema, seguirSistema } from './tema';
+import { crearCarrusel } from './ui/carrusel';
 import { aplicarColor } from './ui/colorApp';
 import type { Contexto } from './ui/contexto';
-import { alDeslizar } from './ui/deslizar';
 import { ITEMS, crearBarraNavegacion, indiceDe } from './ui/navbar';
 import { alCambiarRuta, destinoDe, leerRuta, navegar, type Ruta } from './ui/router';
 import { pantallaAjustes } from './pantallas/ajustes';
@@ -24,10 +24,29 @@ seguirSistema();
 if (import.meta.env.DEV) validarRutina();
 
 const app = document.getElementById('app')!;
-const vista = document.createElement('div');
-vista.className = 'vista';
-app.append(vista);
-const barra = crearBarraNavegacion(app);
+
+/** Hash actual normalizado ("" y "#/" son la Rutina). */
+function hashActual(): string {
+  const h = location.hash;
+  return !h || h === '#' || h === '#/' ? '#/hoy' : h;
+}
+
+function dibujarPantalla(contenedor: HTMLElement, ctx: Contexto, ruta: Ruta): Promise<void> {
+  switch (ruta.pantalla) {
+    case 'hoy':
+      return pantallaHoy(contenedor, ctx, ruta);
+    case 'historial':
+      return pantallaHistorial(contenedor, ctx, ruta);
+    case 'sesion':
+      return pantallaSesion(contenedor, ctx, ruta);
+    case 'ejercicio':
+      return pantallaEvolucion(contenedor, ctx, ruta);
+    case 'cronometro':
+      return pantallaCronometro(contenedor, ctx, ruta);
+    case 'ajustes':
+      return pantallaAjustes(contenedor, ctx, ruta);
+  }
+}
 
 async function iniciar(): Promise<void> {
   const repos = await crearRepositorios();
@@ -37,67 +56,80 @@ async function iniciar(): Promise<void> {
   // Pide que el sistema no borre los datos si falta espacio.
   navigator.storage?.persist?.().catch(() => undefined);
 
-  let turno = 0;
-  let claveAnterior = '';
-  let indiceAnterior = -1;
+  // Las 4 pantallas de la barra están siempre montadas en el carrusel. Cada
+  // una recuerda su ruta (ej. Historial puede estar en el detalle de una sesión).
+  const hashInicial = hashActual();
+  const indiceInicial = indiceDe(destinoDe(leerRuta(hashInicial)));
+  const rutaDePanel = ITEMS.map((item) => item.href);
+  const turnos = ITEMS.map(() => 0);
+
+  const barra = crearBarraNavegacion(app, (destino) => {
+    const i = indiceDe(destino);
+    // Tocar el ícono de la pantalla actual vuelve a su inicio (ej. del detalle a la lista).
+    if (i === carrusel.indice()) navegar(ITEMS[i].href, { reemplazar: true });
+    else navegar(rutaDePanel[i], { reemplazar: true });
+  });
+
+  const carrusel = crearCarrusel(app, {
+    cantidad: ITEMS.length,
+    inicial: indiceInicial,
+    alMover: (posicion, animado) => barra.posicionar(posicion, animado),
+    alCambiar: (i) => {
+      barra.marcarActivo(ITEMS[i].destino);
+      navegar(rutaDePanel[i], { reemplazar: true });
+    },
+    // En Rutina, deslizar a la derecha sobre un ejercicio abre la carga de series (hoy.ts).
+    permitir: (direccion, origen, i) =>
+      !(ITEMS[i].destino === 'hoy' && direccion === 'derecha' && origen.closest('.ejercicio')),
+  });
+
+  // Ninguna pantalla se reemplaza mientras el carrusel se mueve: espera a que quede quieto.
+  let esperando: (() => void)[] = [];
+  carrusel.alQuedarQuieto(() => {
+    const listos = esperando;
+    esperando = [];
+    for (const r of listos) r();
+  });
+  const quieto = () =>
+    carrusel.ocupado() ? new Promise<void>((resolve) => esperando.push(resolve)) : Promise.resolve();
 
   const ctx: Contexto = {
     repos,
     entrenamiento: new Entrenamiento(repos),
-    refrescar: () => void dibujar(leerRuta()),
+    // La pantalla visible se redibuja ya; las otras, fuera de la vista, para que
+    // al deslizar hacia ellas ya estén al día.
+    refrescar: () => ITEMS.forEach((_, i) => void renderizar(i, rutaDePanel[i])),
+    arriba: () => carrusel.paneles[carrusel.indice()].scrollTo({ top: 0 }),
   };
 
-  async function dibujar(ruta: Ruta): Promise<void> {
-    const miTurno = ++turno;
-    const clave = JSON.stringify(ruta);
-    const esOtraPantalla = clave !== claveAnterior;
-    const indice = indiceDe(destinoDe(ruta));
-    // Entre destinos de la barra, la pantalla se desliza hacia el lado que corresponde.
-    const direccion = indiceAnterior >= 0 && indice !== indiceAnterior ? Math.sign(indice - indiceAnterior) : 0;
-    barra.marcarActivo(destinoDe(ruta));
-
-    // Se arma fuera de pantalla y se cambia de una vez: sin parpadeos.
+  /** Dibuja una ruta en su panel. Se arma fuera del documento y se cambia de una vez. */
+  async function renderizar(i: number, hash: string, entrando = false): Promise<void> {
+    const turno = ++turnos[i];
     const pantalla = document.createElement('div');
-    pantalla.className = esOtraPantalla && !direccion ? 'pantalla pantalla--entrando' : 'pantalla';
-    switch (ruta.pantalla) {
-      case 'hoy':
-        await pantallaHoy(pantalla, ctx, ruta);
-        break;
-      case 'historial':
-        await pantallaHistorial(pantalla, ctx, ruta);
-        break;
-      case 'sesion':
-        await pantallaSesion(pantalla, ctx, ruta);
-        break;
-      case 'ejercicio':
-        await pantallaEvolucion(pantalla, ctx, ruta);
-        break;
-      case 'cronometro':
-        await pantallaCronometro(pantalla, ctx, ruta);
-        break;
-      case 'ajustes':
-        await pantallaAjustes(pantalla, ctx, ruta);
-        break;
-    }
-    if (miTurno !== turno) return; // Llegó otra navegación mientras cargaba.
-
-    if (direccion) deslizarHacia(pantalla, direccion);
-    else vista.replaceChildren(pantalla);
-    if (esOtraPantalla) window.scrollTo({ top: 0 });
-    claveAnterior = clave;
-    indiceAnterior = indice;
+    pantalla.className = entrando ? 'pantalla pantalla--entrando' : 'pantalla';
+    await dibujarPantalla(pantalla, ctx, leerRuta(hash));
+    await quieto();
+    if (turno !== turnos[i]) return; // llegó otra versión mientras tanto
+    const panel = carrusel.paneles[i];
+    panel.replaceChildren(pantalla);
+    if (entrando) panel.scrollTo({ top: 0 });
+    rutaDePanel[i] = hash;
   }
 
-  alCambiarRuta((ruta) => void dibujar(ruta));
+  /** Muestra la ruta del hash: dentro del mismo panel, o deslizando hasta el suyo. */
+  async function mostrar(hash: string): Promise<void> {
+    const i = indiceDe(destinoDe(leerRuta(hash)));
+    barra.marcarActivo(ITEMS[i].destino);
+    if (i === carrusel.indice()) {
+      if (rutaDePanel[i] !== hash) await renderizar(i, hash, true);
+      return;
+    }
+    // El panel de destino se prepara antes de moverse (todavía no se ve).
+    if (rutaDePanel[i] !== hash) await renderizar(i, hash);
+    await carrusel.irA(i);
+  }
 
-  // Deslizar a los costados: pantalla vecina de la barra. En Rutina, deslizar a
-  // la derecha sobre un ejercicio abre la carga de series (lo maneja hoy.ts).
-  alDeslizar(vista, (direccion, origen) => {
-    const ruta = leerRuta();
-    if (ruta.pantalla === 'hoy' && direccion === 'derecha' && origen.closest('.ejercicio')) return;
-    const destino = ITEMS[indiceDe(destinoDe(ruta)) + (direccion === 'izquierda' ? 1 : -1)];
-    if (destino) navegar(destino.href);
-  });
+  alCambiarRuta(() => void mostrar(hashActual()));
 
   // Al volver a la app (queda abierta en segundo plano) se redibuja:
   // así cambia de día o de semana sola.
@@ -107,35 +139,16 @@ async function iniciar(): Promise<void> {
     }
   });
 
-  await dibujar(leerRuta());
-}
-
-const SIN_ANIMACIONES = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-/** Cambia de pantalla con un desplazamiento horizontal (250ms). */
-function deslizarHacia(nueva: HTMLElement, direccion: number): void {
-  const anteriores = [...vista.children] as HTMLElement[];
-  const actual = anteriores.pop();
-  for (const vieja of anteriores) vieja.remove(); // restos de una animación cortada
-  if (!actual || SIN_ANIMACIONES.matches) {
-    vista.replaceChildren(nueva);
-    return;
-  }
-  // La pantalla que se va queda fija donde estaba scrolleada mientras sale.
-  actual.style.position = 'absolute';
-  actual.style.inset = `${-window.scrollY}px 0 auto 0`;
-  vista.append(nueva);
-  const opciones: KeyframeAnimationOptions = { duration: 250, easing: 'ease-out' };
-  actual.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${-direccion * 100}%)` }], opciones);
-  // Se saca al terminar (con setTimeout y no con .finished: si la app pasa a
-  // segundo plano a mitad de la animación, igual se va).
-  window.setTimeout(() => actual.remove(), 300);
-  nueva.animate([{ transform: `translateX(${direccion * 100}%)` }, { transform: 'translateX(0)' }], opciones);
+  barra.marcarActivo(ITEMS[indiceInicial].destino);
+  await renderizar(indiceInicial, hashInicial);
+  ITEMS.forEach((item, i) => {
+    if (i !== indiceInicial) void renderizar(i, item.href);
+  });
 }
 
 iniciar().catch((error: unknown) => {
   console.error(error);
-  vista.innerHTML = `
+  app.innerHTML = `
     <div class="container contenido">
       <div class="aviso-error">
         <h2>No se pudieron abrir los datos</h2>

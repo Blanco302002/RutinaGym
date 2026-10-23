@@ -88,7 +88,7 @@ export const pantallaCronometro: Pantalla = async (contenedor, ctx) => {
 
   contenedor.classList.add('pantalla-crono');
   contenedor.innerHTML = `
-    ${cabecera({ titulo: 'Cronómetro', etiqueta: 'Entre series' })}
+    ${cabecera({ titulo: 'Cronómetro' })}
     <div class="crono-dial">${esfera()}</div>
     <div class="crono-zona-botones">
       <div class="crono-botones">
@@ -132,7 +132,8 @@ export const pantallaCronometro: Pantalla = async (contenedor, ctx) => {
     } else {
       esperas = 0;
     }
-    pintarTiempo();
+    // Fuera de la vista (otro panel del carrusel) no se pinta, pero sigue el ciclo.
+    if (contenedor.closest<HTMLElement>('.panel')?.dataset.visible !== 'false') pintarTiempo();
     if (estado.corriendo) cuadro = requestAnimationFrame(animar);
   }
 

@@ -118,10 +118,49 @@ svg,
   flex: none;
 }
 
-.vista {
-  position: relative;
-  /* Las pantallas entran y salen de costado sin generar scroll horizontal. */
-  overflow-x: clip;
+/* ── Carrusel de pantallas ──────────────────────────────────
+   Las 4 pantallas de la barra van una al lado de la otra; cada una
+   scrollea por su cuenta. Durante el gesto solo cambia el transform
+   del carril (nada de layout). */
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+.carrusel {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  /* El navegador maneja el scroll vertical; lo horizontal es nuestro. */
+  touch-action: pan-y;
+}
+
+.carrusel--arrastrando {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.carril {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.panel {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  touch-action: pan-y;
+  scrollbar-width: none; /* en el iPhone no se ven igual; en escritorio quedaban entre pantallas */
+}
+
+.panel::-webkit-scrollbar {
+  display: none;
 }
 
 .pantalla--entrando {
@@ -204,6 +243,14 @@ svg,
   letter-spacing: -0.02em;
   line-height: 1;
   text-transform: uppercase;
+}
+
+.cabecera--simple {
+  padding-top: calc(env(safe-area-inset-top) + 20px);
+}
+
+.cabecera--simple .titulo-pantalla {
+  margin-top: 0;
 }
 
 .titulo-pantalla {

@@ -168,7 +168,7 @@ function irADia(ctx: Contexto, indice: number): void {
   if (nuevo === seleccionado) return;
   seleccionado = nuevo;
   ctx.refrescar();
-  window.scrollTo({ top: 0 });
+  ctx.arriba();
 }
 
 function abrir(ctx: Contexto, ejercicioId: string): void {

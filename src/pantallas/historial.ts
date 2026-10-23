@@ -110,7 +110,7 @@ export const pantallaHistorial: Pantalla<RutaHistorial> = async (contenedor, ctx
   }
 
   contenedor.innerHTML = `
-    ${cabecera({ titulo: 'Historial', etiqueta: 'Tu progreso', extra: pestanas(ruta.pestana) })}
+    ${cabecera({ titulo: 'Historial', extra: pestanas(ruta.pestana) })}
     <main class="container contenido">${cuerpo}</main>`;
 
   contenedor.addEventListener('click', (e) => {

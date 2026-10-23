@@ -28,10 +28,16 @@ export function indiceDe(destino: Destino): number {
 }
 
 export interface BarraNavegacion {
+  /** Ícono activo (color y aria-current). */
   marcarActivo(destino: Destino): void;
+  /** Píldora de selección: posición fraccionaria (1.5 = mitad entre el 2.º y el 3.º ícono). */
+  posicionar(posicion: number, animado: boolean): void;
 }
 
-export function crearBarraNavegacion(contenedor: HTMLElement): BarraNavegacion {
+export function crearBarraNavegacion(
+  contenedor: HTMLElement,
+  alElegir: (destino: Destino) => void,
+): BarraNavegacion {
   const nav = document.createElement('nav');
   nav.className = 'barra-nav';
   nav.setAttribute('aria-label', 'Navegación principal');
@@ -46,26 +52,30 @@ export function crearBarraNavegacion(contenedor: HTMLElement): BarraNavegacion {
     ).join('')}`;
   contenedor.append(nav);
 
+  nav.addEventListener('click', (e) => {
+    const enlace = (e.target as HTMLElement).closest<HTMLElement>('[data-destino]');
+    if (!enlace) return;
+    e.preventDefault();
+    alElegir(enlace.dataset.destino as Destino);
+  });
+
   const seleccion = nav.querySelector<HTMLElement>('.barra-nav__seleccion')!;
-  let primeraVez = true;
 
   return {
     marcarActivo(destino) {
-      // La píldora se mueve con transform (la transición está en el CSS).
-      // Al abrir la app aparece directo en su lugar, sin deslizarse.
-      if (primeraVez) seleccion.style.transition = 'none';
-      seleccion.style.setProperty('--nav-indice', String(indiceDe(destino)));
-      if (primeraVez) {
-        void seleccion.offsetWidth; // aplica la posición antes de devolver la transición
-        seleccion.style.transition = '';
-        primeraVez = false;
-      }
       for (const enlace of nav.querySelectorAll<HTMLAnchorElement>('[data-destino]')) {
         const activo = enlace.dataset.destino === destino;
         enlace.classList.toggle('activo', activo);
         if (activo) enlace.setAttribute('aria-current', 'page');
         else enlace.removeAttribute('aria-current');
       }
+    },
+    posicionar(posicion, animado) {
+      // Mismo tiempo y curva que el carrusel: se mueven juntos.
+      seleccion.style.transition = animado ? '' : 'none';
+      // En el efecto elástico de los extremos, la píldora no sale de la barra.
+      const limitada = Math.min(ITEMS.length - 1, Math.max(0, posicion));
+      seleccion.style.setProperty('--nav-indice', String(limitada));
     },
   };
 }

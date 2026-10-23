@@ -15,25 +15,19 @@ export const NOMBRE_ANIMO: Record<Animo, string> = {
 export const NOMBRE_TECNICA: Record<Tecnica, string> = { bien: 'Bien', dudosa: 'Dudosa', mala: 'Mala' };
 
 /** Cabecera negra de las pantallas secundarias. */
-export function cabecera(opciones: {
-  titulo: string;
-  etiqueta?: string;
-  subtitulo?: string;
-  volver?: boolean;
-  extra?: string;
-}): string {
-  const { titulo, etiqueta, subtitulo, volver, extra = '' } = opciones;
+export function cabecera(opciones: { titulo: string; subtitulo?: string; volver?: boolean; extra?: string }): string {
+  const { titulo, subtitulo, volver, extra = '' } = opciones;
   return `
-    <header class="cabecera">
+    <header class="cabecera ${volver ? '' : 'cabecera--simple'}">
       <div class="container">
-        <div class="cabecera-fila">
-          ${
-            volver
-              ? `<button type="button" class="btn btn-cabecera btn-volver" data-accion="volver" aria-label="Volver">
-                   ${icono('chevronLeft')}<span>Volver</span></button>`
-              : `<span class="etiqueta">${escapar(etiqueta ?? '')}</span>`
-          }
-        </div>
+        ${
+          volver
+            ? `<div class="cabecera-fila">
+                 <button type="button" class="btn btn-cabecera btn-volver" data-accion="volver" aria-label="Volver">
+                   ${icono('chevronLeft')}<span>Volver</span></button>
+               </div>`
+            : ''
+        }
         <h1 class="titulo-pantalla">${escapar(titulo)}</h1>
         ${subtitulo ? `<p class="dia-grupo">${subtitulo}</p>` : ''}
         ${extra}

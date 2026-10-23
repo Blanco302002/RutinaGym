@@ -6,8 +6,10 @@ import type { Ruta } from './router';
 export interface Contexto {
   repos: Repositorios;
   entrenamiento: Entrenamiento;
-  /** Vuelve a dibujar la pantalla actual (manteniendo el scroll). */
+  /** Vuelve a dibujar la pantalla actual (manteniendo el scroll) y pone al día las demás. */
   refrescar(): void;
+  /** Lleva la pantalla actual arriba de todo. */
+  arriba(): void;
 }
 
 /** Dibuja la pantalla dentro de `contenedor`. */

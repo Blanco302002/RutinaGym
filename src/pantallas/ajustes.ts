@@ -78,7 +78,7 @@ export const pantallaAjustes: Pantalla = async (contenedor, ctx) => {
   const color = ctx.repos.preferencias.obtener().color;
 
   contenedor.innerHTML = `
-    ${cabecera({ titulo: 'Ajustes', etiqueta: 'Rutina' })}
+    ${cabecera({ titulo: 'Ajustes' })}
     <main class="container contenido">
       <section class="ajuste">
         <h2 class="seccion-titulo">Tema</h2>

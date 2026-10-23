@@ -43,9 +43,9 @@ iOS solo activa el service worker (modo offline) si la página viene por **HTTPS
 | `src/datos/index.ts` | Elige la implementación (para un backend, cambiar solo acá) |
 | `src/dominio/` | Reglas: sesión de la semana, estadísticas, frases de progreso, respaldo, cronómetro |
 | `src/pantallas/` | Rutina (hoy), Historial, Sesión, Evolución, Cronómetro, Ajustes |
-| `src/ui/` | Barra de navegación, deslizar entre pantallas, router, modal de series, stepper, íconos |
+| `src/ui/` | Barra de navegación, carrusel de pantallas (deslizar con el dedo), router, modal de series, stepper, íconos |
 | `src/sw.template.js` | Service worker (el build lo completa con la lista de archivos) |
 | `src/temas-color.ts` | Temas de color (único lugar donde se definen) |
-| `tests/` | Tests con Vitest + fake-indexeddb: reinicio semanal, respaldo, frases, repositorios, colores, cronómetro |
+| `tests/` | Tests con Vitest + fake-indexeddb: reinicio semanal, respaldo, frases, repositorios, colores, cronómetro, gesto del carrusel |
 
 El resto de la app solo usa las interfaces de `src/datos/repositorios.ts`. Un backend futuro implementa esas mismas interfaces (por ejemplo con `fetch`) y se cambia `crearRepositorios()` en `src/datos/index.ts`.
