@@ -114,6 +114,8 @@ export const pantallaAjustes: Pantalla = async (contenedor, ctx) => {
         </div>
         <input type="file" accept="application/json,.json" class="d-none" data-archivo>
       </section>
+
+      <p class="version">Versión ${__VERSION_APP__} UTC</p>
     </main>`;
   mensaje = undefined;
 

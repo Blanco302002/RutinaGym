@@ -74,24 +74,32 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
-/* El documento no scrollea: cada pantalla scrollea por su cuenta dentro del
-   marco. Ni el html ni el body llevan safe area (va solo en cabeceras y
-   contenido), así no se aplica dos veces. */
+/* Cada pantalla scrollea por su cuenta dentro del marco fijo. Ni el html
+   ni el body llevan safe area (va solo en cabeceras y contenido), así no se
+   aplica dos veces.
+   Sin overflow ni height en html/body: un overflow que no sea visible en la
+   raíz se pasa al viewport y recorta todo lo que quede fuera de él. */
 html,
 body {
-  height: 100%;
-  overflow: hidden;
   overscroll-behavior: none;
   background: var(--fondo);
+}
+
+/* iOS 26, app instalada con barra de estado translúcida (bug de WebKit
+   301108): el viewport arranca más corto que la pantalla por el alto de la
+   barra de estado (793 en vez de 852 en un iPhone 16), y lo que queda abajo
+   no se dibuja. Si la página mide al menos lo mismo que la pantalla, iOS le
+   da el viewport completo y el marco fijo llega solo hasta el borde.
+   El min() evita que sobre algo donde no pasa (ahí 100lvh ya es el alto real). */
+@media (display-mode: standalone) {
+  html {
+    min-height: min(100lvh, calc(100% + env(safe-area-inset-top)));
+  }
 }
 
 body {
   color: var(--texto);
   -webkit-tap-highlight-color: transparent;
-}
-
-body.modal-abierto {
-  overflow: hidden;
 }
 
 button {
@@ -139,7 +147,7 @@ svg,
   top: 0;
   left: 0;
   right: 0;
-  height: var(--alto-app, 100dvh); /* --alto-app: solo lo usa el diagnóstico temporal */
+  height: 100dvh;
 }
 
 .carrusel {
@@ -1500,6 +1508,13 @@ svg,
 
 .btn-grande:active {
   transform: scale(0.98);
+}
+
+.version {
+  margin: 32px 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--tenue);
 }
 
 .mensaje {

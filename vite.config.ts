@@ -75,7 +75,7 @@ function temasDeColor(): Plugin {
 export default defineConfig({
   // Rutas relativas: funciona igual en la raíz de un dominio o en una subcarpeta.
   base: './',
-  // TEMPORAL (diagnóstico): fecha del build para confirmar qué versión corre en el iPhone.
-  define: { __VERSION_APP__: JSON.stringify(new Date().toISOString().slice(0, 16)) },
+  // Fecha del build (UTC), visible en Ajustes: así se ve qué versión tiene el iPhone.
+  define: { __VERSION_APP__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')) },
   plugins: [temasDeColor(), serviceWorker()],
 });

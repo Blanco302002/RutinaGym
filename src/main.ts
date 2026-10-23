@@ -6,7 +6,6 @@ import { crearRepositorios } from './datos';
 import { catalogoDeRutina, validarRutina } from './dominio/catalogo';
 import { Entrenamiento } from './dominio/entrenamiento';
 import { migrarDesdeLocalStorage } from './dominio/migracion';
-import { iniciarDiagnostico } from './diagnostico'; // TEMPORAL
 import { aplicarTema, seguirSistema } from './tema';
 import { crearCarrusel } from './ui/carrusel';
 import { aplicarColor } from './ui/colorApp';
@@ -147,7 +146,6 @@ async function iniciar(): Promise<void> {
 
   barra.marcarActivo(ITEMS[indiceInicial].destino);
   await renderizar(indiceInicial, hashInicial);
-  iniciarDiagnostico(); // TEMPORAL
   ITEMS.forEach((item, i) => {
     if (i !== indiceInicial) void renderizar(i, item.href);
   });
