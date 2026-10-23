@@ -4,19 +4,26 @@ import 'fake-indexeddb/auto';
 import type { Serie } from '../src/datos/modelos';
 import { crearRepositoriosIDB } from '../src/datos/indexeddb/repositorios';
 import { CronometroEnMemoria, PreferenciasEnMemoria } from '../src/datos/preferencias';
-import { catalogoDeRutina } from '../src/dominio/catalogo';
 import { Entrenamiento } from '../src/dominio/entrenamiento';
+import { GestorRutinas } from '../src/dominio/rutinas';
 
 let contadorDB = 0;
 
-/** Repositorios sobre una base nueva, sin entrenamientos (como la app recién instalada). */
-export async function baseVacia() {
+/** Un teléfono recién instalado: la base existe pero no tiene nada. */
+export async function telefonoNuevo() {
   const repos = await crearRepositoriosIDB(
     { preferencias: new PreferenciasEnMemoria(), cronometro: new CronometroEnMemoria() },
     `test-${contadorDB++}`,
   );
-  await repos.ejercicios.sincronizar(catalogoDeRutina()); // igual que al abrir la app
-  return { repos, entrenamiento: new Entrenamiento(repos) };
+  const rutinas = new GestorRutinas(repos);
+  return { repos, rutinas, entrenamiento: new Entrenamiento(repos, rutinas) };
+}
+
+/** Base sin entrenamientos pero con la rutina de ejemplo activa (lo más común en los tests). */
+export async function baseVacia() {
+  const base = await telefonoNuevo();
+  const rutina = await base.rutinas.crearDesdeSemilla('Rutina principal', true);
+  return { ...base, rutina };
 }
 
 /** Fecha local: dia(2026, 10, 19) es el 19 de octubre de 2026 (mes 1-12). */

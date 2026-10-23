@@ -1,9 +1,8 @@
 // Historial: pestañas Sesiones y Ejercicios.
 
 import type { Ejercicio, ResumenSesion, Sesion } from '../datos';
-import { DIAS_DE_ENTRENAMIENTO } from '../dominio/catalogo';
 import { tieneActividad } from '../dominio/entrenamiento';
-import { RUTINA } from '../rutina';
+import { NOMBRES_DIAS, type RutinaCompleta } from '../dominio/rutinas';
 import { fechaLarga, lunesDe } from '../util/fechas';
 import { escapar, normalizar, plural } from '../util/formato';
 import { cabecera, insigniaAnimo, vacio } from '../ui/componentes';
@@ -22,27 +21,45 @@ function pestanas(activa: RutaHistorial['pestana']): string {
   return `<div class="pestanas" role="tablist">${tab('sesiones', 'Sesiones')}${tab('ejercicios', 'Ejercicios')}</div>`;
 }
 
-function renderAdherencia(sesiones: Sesion[], resumen: Record<string, ResumenSesion>): string {
+/** Días de entrenamiento de la rutina activa hechos esta semana (con esa rutina). */
+function renderAdherencia(
+  rutina: RutinaCompleta | undefined,
+  sesiones: Sesion[],
+  resumen: Record<string, ResumenSesion>,
+): string {
+  if (!rutina) return '';
   const lunes = lunesDe(new Date());
+  const entrena = (i: number) => rutina.dias[i]?.dia.tipo === 'entrenamiento';
   const hechos = new Set(
     sesiones
-      .filter((s) => s.fecha >= lunes && !RUTINA[s.dia]?.descanso && tieneActividad(s, resumen[s.id]?.series))
+      .filter(
+        (s) =>
+          s.fecha >= lunes &&
+          s.rutinaId === rutina.rutina.id &&
+          entrena(s.dia) &&
+          tieneActividad(s, resumen[s.id]?.series),
+      )
       .map((s) => s.dia),
   );
-  const puntos = RUTINA.map((d, i) =>
-    d.descanso ? '' : `<span class="punto ${hechos.has(i) ? 'lleno' : ''}" title="${d.nombre}"></span>`,
+  const total = rutina.dias.filter((d) => d.dia.tipo === 'entrenamiento').length;
+  const puntos = NOMBRES_DIAS.map((nombre, i) =>
+    entrena(i) ? `<span class="punto ${hechos.has(i) ? 'lleno' : ''}" title="${nombre}"></span>` : '',
   ).join('');
   return `
     <section class="adherencia" aria-label="Adherencia de la semana">
       <div>
         <span class="adherencia-etiqueta">Esta semana</span>
-        <span class="adherencia-valor"><strong>${hechos.size}</strong> de ${DIAS_DE_ENTRENAMIENTO}</span>
+        <span class="adherencia-valor"><strong>${hechos.size}</strong> de ${total}</span>
       </div>
       <div class="puntos">${puntos}</div>
     </section>`;
 }
 
-function renderSesiones(sesiones: Sesion[], resumen: Record<string, ResumenSesion>): string {
+function renderSesiones(
+  rutina: RutinaCompleta | undefined,
+  sesiones: Sesion[],
+  resumen: Record<string, ResumenSesion>,
+): string {
   const conActividad = sesiones.filter((s) => tieneActividad(s, resumen[s.id]?.series));
   const filas = conActividad
     .map((s) => {
@@ -63,7 +80,7 @@ function renderSesiones(sesiones: Sesion[], resumen: Record<string, ResumenSesio
     .join('');
 
   return `
-    ${renderAdherencia(sesiones, resumen)}
+    ${renderAdherencia(rutina, sesiones, resumen)}
     ${filas ? `<ul class="lista">${filas}</ul>` : vacio('Sin entrenamientos', 'Cuando cargues series, tus sesiones aparecen acá.')}`;
 }
 
@@ -96,11 +113,16 @@ export const pantallaHistorial: Pantalla<RutaHistorial> = async (contenedor, ctx
   let cuerpo: string;
   let ejercicios: Ejercicio[] = [];
   if (esSesiones) {
-    const [sesiones, resumen] = await Promise.all([ctx.repos.sesiones.listar(), ctx.repos.series.resumenPorSesion()]);
-    cuerpo = renderSesiones(sesiones, resumen);
+    const [sesiones, resumen, rutina] = await Promise.all([
+      ctx.repos.sesiones.listar(),
+      ctx.repos.series.resumenPorSesion(),
+      ctx.rutinas.activaCompleta(),
+    ]);
+    cuerpo = renderSesiones(rutina, sesiones, resumen);
   } else {
-    // Primero en el orden de la rutina; al final, los que ya no están.
-    const orden = RUTINA.flatMap((d) => d.ejercicios.map((e) => e.id));
+    // Primero en el orden de la rutina activa; al final, los que no están en ella.
+    const rutina = await ctx.rutinas.activaCompleta();
+    const orden = rutina?.dias.flatMap((d) => d.ejercicios.map((e) => e.ejercicio.id)) ?? [];
     ejercicios = (await ctx.repos.ejercicios.listar()).sort((a, b) => {
       const ia = orden.indexOf(a.id);
       const ib = orden.indexOf(b.id);

@@ -1,7 +1,6 @@
 // Detalle de una sesión: cada ejercicio con sus series y la técnica.
 
 import type { Serie } from '../datos';
-import { RUTINA } from '../rutina';
 import { fechaLarga } from '../util/fechas';
 import { escapar, numero } from '../util/formato';
 import { NOMBRE_ANIMO, cabecera, insigniaTecnica, vacio } from '../ui/componentes';
@@ -24,8 +23,9 @@ export const pantallaSesion: Pantalla<Extract<Ruta, { pantalla: 'sesion' }>> = a
     const porEjercicio = new Map<string, Serie[]>();
     for (const s of series) porEjercicio.set(s.ejercicioId, [...(porEjercicio.get(s.ejercicioId) ?? []), s]);
 
-    // Orden: el de la rutina de ese día; después, cualquier otro.
-    const orden = RUTINA[sesion.dia]?.ejercicios.map((e) => e.id) ?? [];
+    // Orden: el de la rutina con la que se hizo (ese día); después, cualquier otro.
+    const rutina = sesion.rutinaId ? await ctx.rutinas.completa(sesion.rutinaId) : undefined;
+    const orden = rutina?.dias[sesion.dia]?.ejercicios.map((e) => e.ejercicio.id) ?? [];
     const ids = [...new Set([...orden, ...porEjercicio.keys(), ...sesion.completados])].filter(
       (id) => porEjercicio.has(id) || sesion.completados.includes(id),
     );

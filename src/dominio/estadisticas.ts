@@ -1,6 +1,6 @@
 // Cálculos sobre el historial de series de un ejercicio. Funciones puras.
 
-import type { Serie } from '../datos/modelos';
+import type { Serie, Sesion } from '../datos/modelos';
 
 export interface SesionDeEjercicio {
   sesionId: string;
@@ -77,4 +77,26 @@ export function precarga(
   const fuente =
     anterior?.series.find((s) => s.numero === numero) ?? deHoy.at(-1) ?? anterior?.series.at(-1);
   return fuente ? { peso: fuente.peso, reps: fuente.reps } : { peso: 0, reps: repsPorDefecto };
+}
+
+/**
+ * Rutinas por las que se puede filtrar el historial de un ejercicio: las de
+ * las sesiones en que se hizo y las rutinas donde aparece hoy (sin repetir).
+ */
+export function rutinasParaFiltrar(
+  grupos: SesionDeEjercicio[],
+  sesiones: Map<string, Sesion>,
+  rutinasDondeEsta: string[] = [],
+): string[] {
+  const ids = grupos.map((g) => sesiones.get(g.sesionId)?.rutinaId).filter((id): id is string => !!id);
+  return [...new Set([...ids, ...rutinasDondeEsta])];
+}
+
+/** Sesiones del historial de un ejercicio hechas con una rutina (sin rutina: todas). */
+export function filtrarPorRutina(
+  grupos: SesionDeEjercicio[],
+  sesiones: Map<string, Sesion>,
+  rutinaId?: string,
+): SesionDeEjercicio[] {
+  return rutinaId ? grupos.filter((g) => sesiones.get(g.sesionId)?.rutinaId === rutinaId) : grupos;
 }

@@ -1,7 +1,12 @@
 // ─────────────────────────────────────────────────────────────
-//  TU RUTINA
-//  Editá este archivo para cambiar ejercicios, series o repeticiones.
-//  Después hacé commit y push: GitHub Pages publica solo.
+//  RUTINA SEMILLA
+//  Ya no es la rutina que usa la app: las rutinas se editan desde la app
+//  (Ajustes → Rutinas) y se guardan en la base. Este archivo solo se usa:
+//    - la primera vez que se abre esta versión con datos de antes, para
+//      armar la "Rutina principal" con los mismos ids (historial conectado);
+//    - en un teléfono nuevo, como "Rutina de ejemplo";
+//    - al importar un respaldo viejo que no tenía rutinas.
+//  Cambiarlo no modifica las rutinas que ya están guardadas.
 //
 //  Cada ejercicio:
 //    id      → identificador fijo (minúsculas y guiones bajos). El historial

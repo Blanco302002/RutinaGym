@@ -1,21 +1,30 @@
 // Modal a pantalla completa para cargar una serie de un ejercicio.
 
 import type { Serie, Tecnica } from '../datos';
-import { llevaSeries, objetivo, repsMinimas } from '../dominio/catalogo';
 import type { EstadoDeCarga } from '../dominio/entrenamiento';
 import { precarga, resumenEjercicio } from '../dominio/estadisticas';
-import type { EjercicioDeRutina } from '../rutina';
+import { objetivo, repsMinimas } from '../dominio/rutinas';
 import { fechaCorta } from '../util/fechas';
 import { escapar, numero } from '../util/formato';
 import { NOMBRE_TECNICA } from './componentes';
 import type { Contexto } from './contexto';
+import { confirmar } from './dialogo';
 import { icono } from './iconos';
 import { crearStepper, type Stepper } from './stepper';
+
+/** El ejercicio tal como está en la rutina activa. */
+export interface EjercicioParaCargar {
+  id: string;
+  nombre: string;
+  series: number;
+  reps: string;
+  notas: string;
+}
 
 export interface OpcionesModal {
   ctx: Contexto;
   dia: number;
-  ejercicio: EjercicioDeRutina;
+  ejercicio: EjercicioParaCargar;
   /** Se llama al cerrar. `cambios`: si se guardó algo. */
   alCerrar(cambios: boolean): void;
   /** Tocar el nombre: ir a la evolución del ejercicio. */
@@ -30,7 +39,6 @@ function serieCorta(s: Pick<Serie, 'peso' | 'reps'>): string {
 
 export function abrirModalSerie(op: OpcionesModal): void {
   const { ctx, dia, ejercicio } = op;
-  if (!llevaSeries(ejercicio)) return;
   const total = ejercicio.series;
 
   const modal = document.createElement('div');
@@ -74,7 +82,7 @@ export function abrirModalSerie(op: OpcionesModal): void {
         <span class="modal-titulo-link">Ver evolución ${icono('arrowRight')}</span>
       </button>
       <p class="modal-objetivo"><span class="series">${escapar(objetivo(ejercicio))}</span>
-        ${ejercicio.nota ? `<span class="nota">${escapar(ejercicio.nota)}</span>` : ''}</p>`;
+        ${ejercicio.notas ? `<span class="nota">${escapar(ejercicio.notas)}</span>` : ''}</p>`;
   }
 
   function dibujarCarga({ historial, deHoy, completado, numero: numeroSerie }: EstadoDeCarga): void {
@@ -193,7 +201,13 @@ export function abrirModalSerie(op: OpcionesModal): void {
     } else if (accion === 'terminar') {
       dibujarTecnica();
     } else if (accion === 'borrar' && sesionId) {
-      if (!confirm('¿Borrar la última serie cargada hoy?')) return;
+      const ok = await confirmar({
+        titulo: '¿Borrar la última serie?',
+        mensaje: 'Se borra la última serie que cargaste hoy en este ejercicio.',
+        confirmar: 'Borrar',
+        peligro: true,
+      });
+      if (!ok) return;
       await ctx.entrenamiento.borrarUltimaSerie(sesionId, ejercicio.id);
       cambios = true;
       await cargar();

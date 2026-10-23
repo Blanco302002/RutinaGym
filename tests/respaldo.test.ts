@@ -48,7 +48,7 @@ describe('Exportar e importar', () => {
     await restaurarRespaldo(destino, respaldo);
 
     expect(await destino.series.obtenerHistorial('jalon_pecho')).toEqual([]);
-    expect(await destino.respaldo.contar()).toEqual({ sesiones: 1, series: 2 });
+    expect(await destino.respaldo.contar()).toEqual({ sesiones: 1, series: 2, rutinas: 1 });
   });
 
   it('un JSON roto devuelve un error y no toca los datos', async () => {

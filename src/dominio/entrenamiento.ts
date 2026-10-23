@@ -2,16 +2,20 @@
 // cada día de la semana, numeración de series, técnica, ánimo.
 //
 // Reinicio semanal: lo que se ve tachado sale de las sesiones de la semana
-// actual (lunes a domingo). Al empezar otra semana no hay sesiones nuevas,
-// así que todo aparece destildado, y el historial queda intacto.
+// actual (lunes a domingo) hechas con la rutina activa. Al empezar otra semana
+// (o al cambiar de rutina) no hay sesiones que coincidan, así que todo aparece
+// destildado, y el historial queda intacto.
 
 import type { Animo, Repositorios, Serie, Sesion, Tecnica } from '../datos';
-import { RUTINA } from '../rutina';
 import { fechaTexto, lunesDe, sumarDias } from '../util/fechas';
 import { siguienteNumero } from './estadisticas';
+import type { GestorRutinas } from './rutinas';
 
 export interface Semana {
   lunes: string;
+  /** Rutina activa (los tildes son de sus sesiones). */
+  rutinaId?: string;
+  /** Todas las sesiones de la semana, de cualquier rutina. */
   sesiones: Sesion[];
 }
 
@@ -33,16 +37,23 @@ export interface EstadoDeCarga {
 }
 
 export class Entrenamiento {
-  constructor(private readonly repos: Repositorios) {}
+  constructor(
+    private readonly repos: Repositorios,
+    private readonly rutinas: GestorRutinas,
+  ) {}
 
   async semana(hoy = new Date()): Promise<Semana> {
     const lunes = lunesDe(hoy);
-    return { lunes, sesiones: await this.repos.sesiones.listarEntre(lunes, sumarDias(lunes, 6)) };
+    const [activa, sesiones] = await Promise.all([
+      this.rutinas.activa(),
+      this.repos.sesiones.listarEntre(lunes, sumarDias(lunes, 6)),
+    ]);
+    return { lunes, rutinaId: activa?.id, sesiones };
   }
 
-  /** Sesión de esta semana para un día de la rutina (la más reciente si hay varias). */
+  /** Sesión de esta semana para un día de la rutina activa (la más reciente si hay varias). */
   sesionDelDia(semana: Semana, dia: number): Sesion | undefined {
-    return semana.sesiones.find((s) => s.dia === dia);
+    return semana.sesiones.find((s) => s.dia === dia && s.rutinaId === semana.rutinaId);
   }
 
   /** Devuelve la sesión de esta semana para ese día, o la crea con fecha de hoy. */
@@ -51,12 +62,14 @@ export class Entrenamiento {
     const existente = this.sesionDelDia(semana, dia);
     if (existente) return existente;
 
+    const rutina = await this.rutinas.activaCompleta();
     const fecha = fechaTexto(hoy);
     const sesion: Sesion = {
-      id: `${fecha}_${dia}`,
+      id: `${fecha}_${dia}_${rutina?.rutina.id ?? 'sin-rutina'}`,
       fecha,
       dia,
-      rutina: RUTINA[dia].grupo,
+      rutina: rutina?.dias[dia]?.dia.nombre ?? '',
+      rutinaId: rutina?.rutina.id,
       // El ánimo es del día: si ya lo contesté en otra sesión de hoy, se hereda.
       animo: semana.sesiones.find((s) => s.fecha === fecha && s.animo)?.animo,
       tecnica: {},

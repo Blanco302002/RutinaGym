@@ -1530,3 +1530,537 @@ svg,
   border: 1px solid var(--tecnica-mala);
   color: var(--tecnica-mala);
 }
+
+/* ── Notas en las tarjetas de Rutina ────────────────────── */
+
+/* Máximo 2 renglones; justificado con separación en sílabas (lang="es")
+   para que no queden huecos feos entre palabras. */
+.nota--tarjeta {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  text-align: justify;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+
+.ejercicio.hecho .nota--tarjeta {
+  color: var(--hecho-texto);
+  text-decoration: line-through;
+}
+
+/* ── Botones comunes ────────────────────────────────────── */
+
+.centrado {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* Botón rectangular con ícono y texto (ej. "Editar", "Agregar ejercicio"). */
+.btn-accion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 20px;
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  background: var(--tarjeta);
+  color: var(--acento-texto);
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 100ms ease;
+}
+
+.btn-accion .icono {
+  width: 22px;
+  height: 22px;
+}
+
+.btn-accion:active {
+  transform: scale(0.98);
+}
+
+.btn-accion--ancho {
+  display: flex;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.btn-peligro {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  border: 0;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--tecnica-mala) 14%, transparent);
+  color: var(--tecnica-mala);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.btn-peligro .icono {
+  width: 22px;
+  height: 22px;
+}
+
+.btn-peligro:disabled {
+  opacity: 0.45;
+}
+
+.btn-principal span,
+.btn-peligro span,
+.btn-secundario span {
+  pointer-events: none;
+}
+
+.btn-secundario--grande {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  font-size: 1.1rem;
+}
+
+.btn-secundario--grande .icono {
+  width: 24px;
+  height: 24px;
+}
+
+.acciones-pie {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+/* Opciones de "+ Nueva rutina" */
+.nueva-rutina {
+  margin-top: 4px;
+}
+
+.nueva-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-opcion {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--tarjeta);
+  color: var(--texto);
+  text-align: left;
+}
+
+.btn-opcion .icono {
+  width: 24px;
+  height: 24px;
+  color: var(--acento-texto);
+}
+
+.btn-opcion span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.btn-opcion small {
+  color: var(--tenue);
+  font-size: 0.9rem;
+}
+
+.btn-opcion--simple {
+  min-height: 52px;
+  font-weight: 700;
+}
+
+.btn-opcion--crear {
+  margin-bottom: 12px;
+  border-color: var(--acento-suave-fuerte);
+  background: var(--acento-suave);
+}
+
+.duplicar-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Listas de los editores ─────────────────────────────── */
+
+.insignia-activa {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.fila-link-letra,
+.fila-link-icono {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--fondo);
+  color: var(--acento-texto);
+  font-weight: 800;
+}
+
+.fila-link-icono .icono {
+  width: 22px;
+  height: 22px;
+}
+
+.fila-link-sub--descanso {
+  font-style: italic;
+}
+
+.fila-link--boton {
+  width: 100%;
+  color: var(--texto);
+  text-align: left;
+}
+
+.item-editable {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--tarjeta);
+}
+
+.item-abrir {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 68px;
+  padding: 12px 8px 12px 18px;
+  color: var(--texto);
+  text-decoration: none;
+}
+
+.item-flechas {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 8px;
+}
+
+.btn-flecha {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: var(--fondo);
+  color: var(--texto);
+}
+
+.btn-flecha[hidden] {
+  display: grid;
+  visibility: hidden; /* conserva el lugar: las filas no saltan */
+}
+
+.btn-flecha .icono {
+  width: 22px;
+  height: 22px;
+}
+
+.btn-flecha:active {
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+}
+
+.segmentado--dos {
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: 18px;
+}
+
+.descanso--chico {
+  padding: 24px;
+}
+
+.descanso--chico .icono {
+  width: 44px;
+  height: 44px;
+}
+
+.descanso--chico p {
+  margin-top: 10px;
+  font-size: 1rem;
+}
+
+/* ── Formularios ────────────────────────────────────────── */
+
+.campo {
+  display: block;
+  margin-bottom: 18px;
+}
+
+.campo-etiqueta {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+
+.campo-etiqueta--con-contador {
+  display: flex;
+  justify-content: space-between;
+}
+
+.contador {
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.campo-input {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 16px;
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  background: var(--tarjeta);
+  color: var(--texto);
+  font-size: 1.1rem; /* 16px o más: iOS no hace zoom al tocar el campo */
+  font-weight: 600;
+}
+
+.campo-input:focus {
+  outline: 3px solid var(--acento-suave-fuerte);
+  border-color: var(--acento);
+}
+
+.campo-textarea {
+  padding: 14px 16px;
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.35;
+}
+
+.campo-error {
+  margin: 6px 2px 0;
+  color: var(--tecnica-mala);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.campo-ayuda {
+  margin: 6px 2px 0;
+  color: var(--tenue);
+  font-size: 0.9rem;
+}
+
+.campo-ayuda--aviso {
+  color: var(--tecnica-dudosa);
+  font-weight: 700;
+}
+
+.aviso,
+.aviso-ok {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+  font-weight: 700;
+}
+
+.aviso-ok {
+  margin: 0;
+}
+
+/* ── Evolución: filtros y etiqueta de rutina ────────────── */
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.filtro {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--tarjeta);
+  color: var(--texto);
+  font-weight: 700;
+}
+
+.filtro.activo {
+  border-color: var(--acento-relleno);
+  background: var(--acento-relleno);
+  color: var(--sobre-acento);
+}
+
+.tarjeta-encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.etiqueta-rutina {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  color: var(--tenue);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ── Diálogo propio ─────────────────────────────────────── */
+
+.dialogo-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+  animation: aparecer 160ms ease-out;
+}
+
+.dialogo-fondo--saliendo {
+  animation: desaparecer 160ms ease-in forwards;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes desaparecer {
+  to {
+    opacity: 0;
+  }
+}
+
+.dialogo {
+  width: 100%;
+  max-width: 400px;
+  padding: 22px;
+  border-radius: 20px;
+  background: var(--tarjeta);
+  color: var(--texto);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.dialogo h2 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.dialogo p {
+  margin: 0;
+  color: var(--tenue);
+}
+
+.dialogo-botones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dialogo-botones .btn-principal,
+.dialogo-botones .btn-peligro {
+  min-height: 52px;
+  font-size: 1.05rem;
+}
+
+/* ── Bienvenida ─────────────────────────────────────────── */
+
+.bienvenida {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  overflow-y: auto;
+  background: var(--fondo);
+  animation: aparecer 200ms ease-out;
+}
+
+.bienvenida--saliendo {
+  animation: desaparecer 200ms ease-in forwards;
+}
+
+.bienvenida-contenido {
+  padding-top: calc(env(safe-area-inset-top) + 24px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
+  text-align: center;
+}
+
+.bienvenida-logo {
+  display: inline-grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 26px;
+  background: var(--acento-relleno);
+  color: var(--sobre-acento);
+}
+
+.bienvenida-logo .icono {
+  width: 48px;
+  height: 48px;
+}
+
+.bienvenida h1 {
+  margin: 20px 0 10px;
+  font-size: 1.9rem;
+  font-weight: 800;
+}
+
+.bienvenida p {
+  color: var(--tenue);
+  font-size: 1.05rem;
+}
+
+.bienvenida-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 28px 0 14px;
+}
+
+.bienvenida-nota {
+  font-size: 0.9rem !important;
+}

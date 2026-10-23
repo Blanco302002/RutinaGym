@@ -15,16 +15,25 @@ export const NOMBRE_ANIMO: Record<Animo, string> = {
 export const NOMBRE_TECNICA: Record<Tecnica, string> = { bien: 'Bien', dudosa: 'Dudosa', mala: 'Mala' };
 
 /** Cabecera negra de las pantallas secundarias. */
-export function cabecera(opciones: { titulo: string; subtitulo?: string; volver?: boolean; extra?: string }): string {
-  const { titulo, subtitulo, volver, extra = '' } = opciones;
+export function cabecera(opciones: {
+  titulo: string;
+  subtitulo?: string;
+  volver?: boolean;
+  /** "Atrás" con flecha (editores) en vez de "Volver" con chevron. */
+  atras?: boolean;
+  extra?: string;
+}): string {
+  const { titulo, subtitulo, atras, extra = '' } = opciones;
+  const volver = opciones.volver || atras;
   return `
     <header class="cabecera ${volver ? '' : 'cabecera--simple'}">
       <div class="container">
         ${
           volver
             ? `<div class="cabecera-fila">
-                 <button type="button" class="btn btn-cabecera btn-volver" data-accion="volver" aria-label="Volver">
-                   ${icono('chevronLeft')}<span>Volver</span></button>
+                 <button type="button" class="btn btn-cabecera btn-volver" data-accion="volver"
+                         aria-label="${atras ? 'Atrás' : 'Volver'}">
+                   ${icono(atras ? 'arrowLeft' : 'chevronLeft')}<span>${atras ? 'Atrás' : 'Volver'}</span></button>
                </div>`
             : ''
         }

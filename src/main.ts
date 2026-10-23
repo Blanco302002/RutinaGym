@@ -3,25 +3,32 @@ import 'virtual:temas-color.css';
 import './style.css';
 
 import { crearRepositorios } from './datos';
-import { catalogoDeRutina, validarRutina } from './dominio/catalogo';
 import { Entrenamiento } from './dominio/entrenamiento';
 import { migrarDesdeLocalStorage } from './dominio/migracion';
+import { GestorRutinas } from './dominio/rutinas';
 import { aplicarTema, seguirSistema } from './tema';
 import { crearCarrusel } from './ui/carrusel';
+import { mostrarBienvenida } from './ui/bienvenida';
 import { aplicarColor } from './ui/colorApp';
 import type { Contexto } from './ui/contexto';
 import { ITEMS, crearBarraNavegacion, indiceDe } from './ui/navbar';
-import { alCambiarRuta, destinoDe, leerRuta, navegar, type Ruta } from './ui/router';
+import { alCambiarRuta, destinoDe, esEditor, hash, leerRuta, navegar, type Ruta } from './ui/router';
 import { pantallaAjustes } from './pantallas/ajustes';
 import { pantallaCronometro } from './pantallas/cronometro';
 import { pantallaEvolucion } from './pantallas/evolucion';
 import { pantallaHistorial } from './pantallas/historial';
 import { pantallaHoy } from './pantallas/hoy';
+import {
+  pantallaAgregarEjercicio,
+  pantallaEditorDia,
+  pantallaEditorRutina,
+  pantallaFormEjercicio,
+  pantallaRutinas,
+} from './pantallas/rutinas';
 import { pantallaSesion } from './pantallas/sesion';
 
 aplicarTema();
 seguirSistema();
-if (import.meta.env.DEV) validarRutina();
 
 const app = document.getElementById('app')!;
 
@@ -45,20 +52,44 @@ function dibujarPantalla(contenedor: HTMLElement, ctx: Contexto, ruta: Ruta): Pr
       return pantallaCronometro(contenedor, ctx, ruta);
     case 'ajustes':
       return pantallaAjustes(contenedor, ctx, ruta);
+    case 'rutinas':
+      return pantallaRutinas(contenedor, ctx, ruta);
+    case 'rutina':
+      return pantallaEditorRutina(contenedor, ctx, ruta);
+    case 'dia':
+      return pantallaEditorDia(contenedor, ctx, ruta);
+    case 'agregar':
+      return pantallaAgregarEjercicio(contenedor, ctx, ruta);
+    case 'item':
+    case 'nuevo':
+    case 'editarEjercicio':
+      return pantallaFormEjercicio(contenedor, ctx, ruta);
   }
 }
 
 async function iniciar(): Promise<void> {
   const repos = await crearRepositorios();
   aplicarColor(repos.preferencias.obtener().color);
-  await repos.ejercicios.sincronizar(catalogoDeRutina());
   await migrarDesdeLocalStorage(repos);
   // Pide que el sistema no borre los datos si falta espacio.
   navigator.storage?.persist?.().catch(() => undefined);
 
+  // Rutinas: con datos de antes se migra la rutina del código ("Rutina
+  // principal"); en un teléfono sin nada, se pregunta cómo empezar.
+  const rutinas = new GestorRutinas(repos);
+  let hashInicial = hashActual();
+  if ((await rutinas.inicializar()) === 'nueva') {
+    if ((await mostrarBienvenida(app)) === 'ejemplo') {
+      await rutinas.usarEjemplo();
+    } else {
+      const nueva = await rutinas.crearDesdeCero('Mi rutina', true);
+      hashInicial = hash('rutina', nueva.id); // directo a su editor
+      navegar(hashInicial, { reemplazar: true });
+    }
+  }
+
   // Las 4 pantallas de la barra están siempre montadas en el carrusel. Cada
   // una recuerda su ruta (ej. Historial puede estar en el detalle de una sesión).
-  const hashInicial = hashActual();
   const indiceInicial = indiceDe(destinoDe(leerRuta(hashInicial)));
   const rutaDePanel = ITEMS.map((item) => item.href);
   const turnos = ITEMS.map(() => 0);
@@ -83,8 +114,10 @@ async function iniciar(): Promise<void> {
       barra.marcarActivo(ITEMS[i].destino);
       navegar(rutaDePanel[i], { reemplazar: true });
     },
-    // En Rutina, deslizar a la derecha sobre un ejercicio abre la carga de series (hoy.ts).
+    // En los editores no se desliza entre pantallas. En Rutina, deslizar a la
+    // derecha sobre un ejercicio abre la carga de series (hoy.ts).
     permitir: (direccion, origen, i) =>
+      !esEditor(leerRuta(rutaDePanel[i])) &&
       !(ITEMS[i].destino === 'hoy' && direccion === 'derecha' && origen.closest('.ejercicio')),
   });
 
@@ -100,10 +133,15 @@ async function iniciar(): Promise<void> {
 
   const ctx: Contexto = {
     repos,
-    entrenamiento: new Entrenamiento(repos),
+    entrenamiento: new Entrenamiento(repos, rutinas),
+    rutinas,
     // La pantalla visible se redibuja ya; las otras, fuera de la vista, para que
     // al deslizar hacia ellas ya estén al día.
     refrescar: () => ITEMS.forEach((_, i) => void renderizar(i, rutaDePanel[i])),
+    cambiaronDatos: () =>
+      ITEMS.forEach((_, i) => {
+        if (i !== carrusel.indice()) void renderizar(i, rutaDePanel[i]);
+      }),
     arriba: () => carrusel.paneles[carrusel.indice()].scrollTo({ top: 0 }),
   };
 

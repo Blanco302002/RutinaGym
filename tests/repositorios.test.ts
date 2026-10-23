@@ -7,12 +7,12 @@ const lunes = dia(2026, 10, 19);
 
 describe('Repositorios y carga de series', () => {
   it('una serie guardada se recupera con todos sus datos', async () => {
-    const { repos, entrenamiento } = await baseVacia();
+    const { repos, entrenamiento, rutina } = await baseVacia();
     const { serie, sesion } = await entrenamiento.guardarSerie(LUNES, 'press_plano', 52.5, 8, lunes);
 
     expect(await repos.series.obtenerPorSesion(sesion.id)).toEqual([serie]);
     expect(serie).toMatchObject({
-      sesionId: '2026-10-19_0',
+      sesionId: `2026-10-19_0_${rutina.id}`,
       ejercicioId: 'press_plano',
       numero: 1,
       peso: 52.5,
@@ -88,22 +88,22 @@ describe('Repositorios y carga de series', () => {
   });
 
   it('el mismo día de rutina en la misma semana usa una sola sesión', async () => {
-    const { entrenamiento } = await baseVacia();
+    const { entrenamiento, rutina } = await baseVacia();
     await entrenamiento.guardarSerie(LUNES, 'press_plano', 50, 10, lunes);
     const { sesion, serie } = await entrenamiento.guardarSerie(LUNES, 'press_plano', 50, 10, dia(2026, 10, 20));
 
-    expect(sesion.id).toBe('2026-10-19_0');
+    expect(sesion.id).toBe(`2026-10-19_0_${rutina.id}`);
     expect(serie.numero).toBe(2);
   });
 
   it('el resumen por sesión cuenta series y ejercicios distintos', async () => {
-    const { repos, entrenamiento } = await baseVacia();
+    const { repos, entrenamiento, rutina } = await baseVacia();
     await entrenamiento.guardarSerie(LUNES, 'press_plano', 50, 10, lunes);
     await entrenamiento.guardarSerie(LUNES, 'press_plano', 50, 10, lunes);
     await entrenamiento.guardarSerie(LUNES, 'aperturas', 14, 12, lunes);
 
     expect(await repos.series.resumenPorSesion()).toEqual({
-      '2026-10-19_0': { series: 3, ejercicios: ['press_plano', 'aperturas'] },
+      [`2026-10-19_0_${rutina.id}`]: { series: 3, ejercicios: ['press_plano', 'aperturas'] },
     });
   });
 

@@ -1,29 +1,136 @@
 // Implementación de los repositorios sobre IndexedDB.
 
-import type { DatosGuardados, Ejercicio, NuevaSerie, ResumenSesion, Serie, Sesion } from '../modelos';
+import type {
+  DatosGuardados,
+  DiaRutina,
+  Ejercicio,
+  EjercicioEnRutina,
+  NuevaSerie,
+  ResumenSesion,
+  Rutina,
+  Serie,
+  Sesion,
+} from '../modelos';
 import type {
   CronometroRepository,
+  DiaRutinaRepository,
+  EjercicioEnRutinaRepository,
   EjercicioRepository,
   PreferenciasRepository,
   Repositorios,
   RespaldoRepository,
+  RutinaRepository,
   SerieRepository,
   SesionRepository,
 } from '../repositorios';
-import { STORES, abrirDB, leer, resultado, terminada } from './db';
+import { STORES, abrirDB, borrar, leer, obtener, poner, porIndice, resultado, terminada, todos } from './db';
 
 class EjercicioRepositoryIDB implements EjercicioRepository {
   constructor(private readonly db: IDBDatabase) {}
 
-  async sincronizar(ejercicios: Ejercicio[]): Promise<void> {
-    const tx = this.db.transaction(STORES.ejercicios, 'readwrite');
-    const store = tx.objectStore(STORES.ejercicios);
-    for (const e of ejercicios) store.put({ id: e.id, nombre: e.nombre });
-    await terminada(tx);
+  obtener(id: string): Promise<Ejercicio | undefined> {
+    return obtener(this.db, STORES.ejercicios, id);
   }
 
   listar(): Promise<Ejercicio[]> {
-    return resultado(leer(this.db, STORES.ejercicios).getAll());
+    return todos(this.db, STORES.ejercicios);
+  }
+
+  guardar(ejercicio: Ejercicio): Promise<void> {
+    return poner(this.db, STORES.ejercicios, [{ id: ejercicio.id, nombre: ejercicio.nombre }]);
+  }
+
+  eliminar(id: string): Promise<void> {
+    return borrar(this.db, STORES.ejercicios, id);
+  }
+}
+
+class RutinaRepositoryIDB implements RutinaRepository {
+  constructor(private readonly db: IDBDatabase) {}
+
+  obtener(id: string): Promise<Rutina | undefined> {
+    return obtener(this.db, STORES.rutinas, id);
+  }
+
+  async listar(): Promise<Rutina[]> {
+    const rutinas = await todos<Rutina>(this.db, STORES.rutinas);
+    return rutinas.sort((a, b) => a.creada - b.creada);
+  }
+
+  guardar(rutina: Rutina): Promise<void> {
+    return poner(this.db, STORES.rutinas, [rutina]);
+  }
+
+  async activar(id: string): Promise<void> {
+    const rutinas = await this.listar();
+    await poner(
+      this.db,
+      STORES.rutinas,
+      rutinas.map((r) => ({ ...r, activa: r.id === id })),
+    );
+  }
+
+  async eliminar(id: string): Promise<void> {
+    // Todo junto: la rutina, sus días y sus ejercicios. Las sesiones y series quedan.
+    const [dias, items] = await Promise.all([
+      porIndice<DiaRutina>(this.db, STORES.dias, 'rutinaId', id),
+      porIndice<EjercicioEnRutina>(this.db, STORES.ejerciciosEnRutina, 'rutinaId', id),
+    ]);
+    const tx = this.db.transaction([STORES.rutinas, STORES.dias, STORES.ejerciciosEnRutina], 'readwrite');
+    tx.objectStore(STORES.rutinas).delete(id);
+    for (const d of dias) tx.objectStore(STORES.dias).delete(d.id);
+    for (const i of items) tx.objectStore(STORES.ejerciciosEnRutina).delete(i.id);
+    await terminada(tx);
+  }
+}
+
+class DiaRutinaRepositoryIDB implements DiaRutinaRepository {
+  constructor(private readonly db: IDBDatabase) {}
+
+  obtener(id: string): Promise<DiaRutina | undefined> {
+    return obtener(this.db, STORES.dias, id);
+  }
+
+  async listarPorRutina(rutinaId: string): Promise<DiaRutina[]> {
+    const dias = await porIndice<DiaRutina>(this.db, STORES.dias, 'rutinaId', rutinaId);
+    return dias.sort((a, b) => a.dia - b.dia);
+  }
+
+  guardar(dia: DiaRutina): Promise<void> {
+    return poner(this.db, STORES.dias, [dia]);
+  }
+}
+
+function porPosicion(a: EjercicioEnRutina, b: EjercicioEnRutina): number {
+  return a.orden - b.orden;
+}
+
+class EjercicioEnRutinaRepositoryIDB implements EjercicioEnRutinaRepository {
+  constructor(private readonly db: IDBDatabase) {}
+
+  obtener(id: string): Promise<EjercicioEnRutina | undefined> {
+    return obtener(this.db, STORES.ejerciciosEnRutina, id);
+  }
+
+  async listarPorDia(diaId: string): Promise<EjercicioEnRutina[]> {
+    return (await porIndice<EjercicioEnRutina>(this.db, STORES.ejerciciosEnRutina, 'diaId', diaId)).sort(porPosicion);
+  }
+
+  async listarPorRutina(rutinaId: string): Promise<EjercicioEnRutina[]> {
+    const items = await porIndice<EjercicioEnRutina>(this.db, STORES.ejerciciosEnRutina, 'rutinaId', rutinaId);
+    return items.sort(porPosicion);
+  }
+
+  listarPorEjercicio(ejercicioId: string): Promise<EjercicioEnRutina[]> {
+    return porIndice(this.db, STORES.ejerciciosEnRutina, 'ejercicioId', ejercicioId);
+  }
+
+  guardar(...items: EjercicioEnRutina[]): Promise<void> {
+    return poner(this.db, STORES.ejerciciosEnRutina, items);
+  }
+
+  eliminar(id: string): Promise<void> {
+    return borrar(this.db, STORES.ejerciciosEnRutina, id);
   }
 }
 
@@ -35,18 +142,15 @@ class SesionRepositoryIDB implements SesionRepository {
   constructor(private readonly db: IDBDatabase) {}
 
   obtener(id: string): Promise<Sesion | undefined> {
-    return resultado(leer(this.db, STORES.sesiones).get(id));
+    return obtener(this.db, STORES.sesiones, id);
   }
 
-  async guardar(sesion: Sesion): Promise<void> {
-    const tx = this.db.transaction(STORES.sesiones, 'readwrite');
-    tx.objectStore(STORES.sesiones).put(sesion);
-    await terminada(tx);
+  guardar(...sesiones: Sesion[]): Promise<void> {
+    return poner(this.db, STORES.sesiones, sesiones);
   }
 
   async listar(): Promise<Sesion[]> {
-    const todas: Sesion[] = await resultado(leer(this.db, STORES.sesiones).getAll());
-    return todas.sort(porFechaDesc);
+    return (await todos<Sesion>(this.db, STORES.sesiones)).sort(porFechaDesc);
   }
 
   async listarEntre(desde: string, hasta: string): Promise<Sesion[]> {
@@ -69,32 +173,24 @@ class SerieRepositoryIDB implements SerieRepository {
     // Siempre creciente, aunque se guarden dos en el mismo milisegundo: define el orden.
     ultimaCreada = Math.max(Date.now(), ultimaCreada + 1);
     const serie: Serie = { ...nueva, id: crypto.randomUUID(), creada: ultimaCreada };
-    const tx = this.db.transaction(STORES.series, 'readwrite');
-    tx.objectStore(STORES.series).put(serie);
-    await terminada(tx);
+    await poner(this.db, STORES.series, [serie]);
     return serie;
   }
 
-  async eliminarSerie(id: string): Promise<void> {
-    const tx = this.db.transaction(STORES.series, 'readwrite');
-    tx.objectStore(STORES.series).delete(id);
-    await terminada(tx);
+  eliminarSerie(id: string): Promise<void> {
+    return borrar(this.db, STORES.series, id);
   }
 
   async obtenerHistorial(ejercicioId: string): Promise<Serie[]> {
-    const indice = leer(this.db, STORES.series).index('ejercicioId');
-    const series: Serie[] = await resultado(indice.getAll(ejercicioId));
-    return series.sort(porOrden);
+    return (await porIndice<Serie>(this.db, STORES.series, 'ejercicioId', ejercicioId)).sort(porOrden);
   }
 
   async obtenerPorSesion(sesionId: string): Promise<Serie[]> {
-    const indice = leer(this.db, STORES.series).index('sesionId');
-    const series: Serie[] = await resultado(indice.getAll(sesionId));
-    return series.sort(porOrden);
+    return (await porIndice<Serie>(this.db, STORES.series, 'sesionId', sesionId)).sort(porOrden);
   }
 
   async resumenPorSesion(): Promise<Record<string, ResumenSesion>> {
-    const series: Serie[] = await resultado(leer(this.db, STORES.series).getAll());
+    const series = await todos<Serie>(this.db, STORES.series);
     series.sort(porOrden); // ejercicios en el orden en que se cargaron (no el de los ids)
     const resumen: Record<string, ResumenSesion> = {};
     for (const s of series) {
@@ -106,28 +202,37 @@ class SerieRepositoryIDB implements SerieRepository {
   }
 }
 
+const TODOS_LOS_STORES = Object.values(STORES);
+
 class RespaldoRepositoryIDB implements RespaldoRepository {
   constructor(private readonly db: IDBDatabase) {}
 
   async exportar(): Promise<DatosGuardados> {
-    const tx = this.db.transaction(Object.values(STORES), 'readonly');
-    const [ejercicios, sesiones, series] = await Promise.all([
-      resultado(tx.objectStore(STORES.ejercicios).getAll()),
-      resultado(tx.objectStore(STORES.sesiones).getAll()),
-      resultado(tx.objectStore(STORES.series).getAll()),
+    const tx = this.db.transaction(TODOS_LOS_STORES, 'readonly');
+    const leerTodo = (store: string) => resultado(tx.objectStore(store).getAll());
+    const [ejercicios, sesiones, series, rutinas, dias, ejerciciosEnRutina] = await Promise.all([
+      leerTodo(STORES.ejercicios),
+      leerTodo(STORES.sesiones),
+      leerTodo(STORES.series),
+      leerTodo(STORES.rutinas),
+      leerTodo(STORES.dias),
+      leerTodo(STORES.ejerciciosEnRutina),
     ]);
-    return { ejercicios, sesiones, series };
+    return { ejercicios, sesiones, series, rutinas, dias, ejerciciosEnRutina };
   }
 
   async importar(datos: DatosGuardados): Promise<void> {
     // Una sola transacción: o se reemplaza todo, o no cambia nada.
-    const tx = this.db.transaction(Object.values(STORES), 'readwrite');
+    const tx = this.db.transaction(TODOS_LOS_STORES, 'readwrite');
     const fin = terminada(tx);
     try {
       const grupos: [string, unknown[]][] = [
         [STORES.ejercicios, datos.ejercicios],
         [STORES.sesiones, datos.sesiones],
         [STORES.series, datos.series],
+        [STORES.rutinas, datos.rutinas],
+        [STORES.dias, datos.dias],
+        [STORES.ejerciciosEnRutina, datos.ejerciciosEnRutina],
       ];
       for (const [nombre, items] of grupos) {
         const store = tx.objectStore(nombre);
@@ -143,13 +248,14 @@ class RespaldoRepositoryIDB implements RespaldoRepository {
     await fin;
   }
 
-  async contar(): Promise<{ sesiones: number; series: number }> {
-    const tx = this.db.transaction([STORES.sesiones, STORES.series], 'readonly');
-    const [sesiones, series] = await Promise.all([
+  async contar(): Promise<{ sesiones: number; series: number; rutinas: number }> {
+    const tx = this.db.transaction([STORES.sesiones, STORES.series, STORES.rutinas], 'readonly');
+    const [sesiones, series, rutinas] = await Promise.all([
       resultado(tx.objectStore(STORES.sesiones).count()),
       resultado(tx.objectStore(STORES.series).count()),
+      resultado(tx.objectStore(STORES.rutinas).count()),
     ]);
-    return { sesiones, series };
+    return { sesiones, series, rutinas };
   }
 }
 
@@ -163,6 +269,9 @@ export async function crearRepositoriosIDB(telefono: DatosDelTelefono, nombreDB?
   const db = await abrirDB(nombreDB);
   return {
     ejercicios: new EjercicioRepositoryIDB(db),
+    rutinas: new RutinaRepositoryIDB(db),
+    dias: new DiaRutinaRepositoryIDB(db),
+    ejerciciosEnRutina: new EjercicioEnRutinaRepositoryIDB(db),
     sesiones: new SesionRepositoryIDB(db),
     series: new SerieRepositoryIDB(db),
     respaldo: new RespaldoRepositoryIDB(db),

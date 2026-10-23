@@ -1,12 +1,12 @@
 // Pantalla principal: la rutina del día, el ánimo y la carga de series.
+// La rutina sale de la base (la rutina activa), no del código.
 
 import type { Animo, Serie, Sesion } from '../datos';
-import { llevaSeries, objetivo } from '../dominio/catalogo';
 import type { Semana } from '../dominio/entrenamiento';
-import { RUTINA, type DiaDeRutina } from '../rutina';
+import { NOMBRES_DIAS, objetivo, type DiaCompleto, type RutinaCompleta } from '../dominio/rutinas';
 import { fechaCorta, fechaTexto, indiceDia, sumarDias } from '../util/fechas';
 import { escapar } from '../util/formato';
-import { NOMBRE_ANIMO, insigniaTecnica } from '../ui/componentes';
+import { NOMBRE_ANIMO, insigniaTecnica, vacio } from '../ui/componentes';
 import type { Contexto, Pantalla } from '../ui/contexto';
 import { carita, icono } from '../ui/iconos';
 import { abrirModalSerie } from '../ui/modalSerie';
@@ -14,6 +14,7 @@ import { navegar } from '../ui/router';
 
 const INICIALES = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const UMBRAL_DESLIZAR = 80;
+const TEXTO_DESCANSO = 'Hoy no se entrena. Caminá, estirá, movete suave y recuperate para el próximo entrenamiento.';
 
 // Día elegido. Se mantiene al ir a otra pantalla y volver; si cambia la
 // fecha (la app quedó abierta de un día para otro) vuelve a hoy.
@@ -21,24 +22,34 @@ let seleccionado = indiceDia(new Date());
 let fechaDeSeleccion = fechaTexto(new Date());
 // Ejercicio recién guardado, para resaltarlo al volver a la lista.
 let resaltado: string | undefined;
+// La rutina de la última vez que se dibujó (para abrir el modal sin volver a leerla).
+let rutinaActual: RutinaCompleta | undefined;
 
-function completo(dia: DiaDeRutina, sesion?: Sesion): boolean {
-  return dia.ejercicios.length > 0 && dia.ejercicios.every((e) => sesion?.completados.includes(e.id));
+function esDescanso(dia?: DiaCompleto): boolean {
+  return !dia || dia.dia.tipo === 'descanso';
 }
 
-function renderCabecera(semana: Semana, sesion: Sesion | undefined, hoy: Date): string {
-  const dia = RUTINA[seleccionado];
+function completo(dia: DiaCompleto | undefined, sesion?: Sesion): boolean {
+  if (!dia || esDescanso(dia) || !dia.ejercicios.length) return false;
+  return dia.ejercicios.every(({ ejercicio }) => sesion?.completados.includes(ejercicio.id));
+}
+
+function renderCabecera(rutina: RutinaCompleta | undefined, semana: Semana, sesion: Sesion | undefined, hoy: Date): string {
+  const dia = rutina?.dias[seleccionado];
+  const descanso = esDescanso(dia);
   const esHoy = seleccionado === indiceDia(hoy);
   const etiquetaFecha = fechaCorta(sumarDias(semana.lunes, seleccionado));
-  const total = dia.ejercicios.length;
-  const hechos = dia.ejercicios.filter((e) => sesion?.completados.includes(e.id)).length;
+  const ejercicios = dia?.ejercicios ?? [];
+  const total = ejercicios.length;
+  const hechos = ejercicios.filter(({ ejercicio }) => sesion?.completados.includes(ejercicio.id)).length;
   const lleno = total > 0 && hechos === total;
   const porcentaje = total ? Math.round((hechos / total) * 100) : 0;
+  const subtitulo = dia ? dia.dia.nombre : 'Sin rutina activa';
 
   // En descanso no hay progreso, pero se reserva el lugar para que la
   // cabecera mida siempre lo mismo.
   const progreso = `
-    <div class="progreso ${dia.descanso ? 'invisible' : ''}" ${dia.descanso ? 'aria-hidden="true"' : ''}>
+    <div class="progreso ${descanso ? 'invisible' : ''}" ${descanso ? 'aria-hidden="true"' : ''}>
       <div class="progreso-texto">
         <span><strong>${hechos}</strong> / ${total} completados</span>
         ${lleno ? '<span class="completo">Día completo</span>' : `<span class="porcentaje">${porcentaje}%</span>`}
@@ -56,21 +67,20 @@ function renderCabecera(semana: Semana, sesion: Sesion | undefined, hoy: Date): 
           <span class="etiqueta">${esHoy ? `Hoy · ${etiquetaFecha}` : etiquetaFecha}</span>
           ${esHoy ? '' : '<button type="button" class="btn btn-cabecera" data-accion="hoy">Volver a hoy</button>'}
         </div>
-        <h1 class="dia-nombre">${escapar(dia.nombre)}</h1>
-        <p class="dia-grupo dia-grupo--una-linea" title="${escapar(dia.nota ? `${dia.grupo} · ${dia.nota}` : dia.grupo)}">${escapar(dia.grupo)}${
-          dia.nota ? `<span class="dia-nota"> · ${escapar(dia.nota)}</span>` : ''
-        }</p>
+        <h1 class="dia-nombre">${NOMBRES_DIAS[seleccionado]}</h1>
+        <p class="dia-grupo dia-grupo--una-linea" title="${escapar(subtitulo)}">${escapar(subtitulo)}</p>
         ${progreso}
       </div>
       <nav class="container dias" aria-label="Días de la semana">
-        ${RUTINA.map((d, i) => {
+        ${NOMBRES_DIAS.map((nombre, i) => {
+          const sesionDia = semana.sesiones.find((s) => s.dia === i && s.rutinaId === semana.rutinaId);
           const clases = [
             'dia-btn',
             i === seleccionado ? 'activo' : '',
             i === indiceDia(hoy) ? 'es-hoy' : '',
-            completo(d, semana.sesiones.find((s) => s.dia === i)) ? 'hecho' : '',
+            completo(rutina?.dias[i], sesionDia) ? 'hecho' : '',
           ].join(' ');
-          return `<button type="button" class="${clases}" data-dia="${i}" aria-label="${d.nombre}"
+          return `<button type="button" class="${clases}" data-dia="${i}" aria-label="${nombre}"
                     ${i === seleccionado ? 'aria-current="true"' : ''}>${INICIALES[i]}</button>`;
         }).join('')}
       </nav>
@@ -93,38 +103,43 @@ function renderAnimo(): string {
     </section>`;
 }
 
-function renderLista(dia: DiaDeRutina, sesion: Sesion | undefined, series: Serie[]): string {
-  if (dia.descanso) {
+function renderLista(dia: DiaCompleto | undefined, sesion: Sesion | undefined, series: Serie[]): string {
+  if (!dia) {
+    return `${vacio('No hay rutina activa', 'Elegí o creá una rutina en Ajustes → Rutinas.')}
+      <div class="centrado"><a class="btn-accion" href="#/rutinas">${icono('settings')}<span>Ir a Rutinas</span></a></div>`;
+  }
+  if (esDescanso(dia)) {
     return `
       <div class="descanso">
         ${icono('bed')}
         <h2>Descanso activo</h2>
-        <p>${escapar(dia.descanso)}</p>
+        <p>${TEXTO_DESCANSO}</p>
       </div>`;
+  }
+  if (!dia.ejercicios.length) {
+    return `${vacio('Este día no tiene ejercicios', 'Agregalos desde el editor del día.')}
+      <div class="centrado"><a class="btn-accion" href="#/dia/${encodeURIComponent(dia.dia.id)}">${icono('plus')}<span>Agregar ejercicios</span></a></div>`;
   }
 
   const filas = dia.ejercicios
-    .map((ej) => {
-      const hecho = sesion?.completados.includes(ej.id) ?? false;
-      const cargadas = series.filter((s) => s.ejercicioId === ej.id).length;
-      const conSeries = llevaSeries(ej);
+    .map(({ item, ejercicio }) => {
+      const hecho = sesion?.completados.includes(ejercicio.id) ?? false;
+      const cargadas = series.filter((s) => s.ejercicioId === ejercicio.id).length;
       const progreso =
-        conSeries && cargadas > 0 && !hecho
-          ? `<span class="progreso-series">${cargadas}/${ej.series} series</span>`
-          : '';
-      const tecnica = hecho ? insigniaTecnica(sesion?.tecnica[ej.id]) : '';
+        cargadas > 0 && !hecho ? `<span class="progreso-series">${cargadas}/${item.series} series</span>` : '';
+      const tecnica = hecho ? insigniaTecnica(sesion?.tecnica[ejercicio.id]) : '';
       return `
-        <li class="fila ${conSeries ? 'fila--deslizable' : ''} ${resaltado === ej.id ? 'fila--resaltada' : ''}">
-          ${conSeries ? `<div class="fila-fondo" aria-hidden="true">${icono('dumbbell')} Cargar serie</div>` : ''}
-          <div class="ejercicio ${hecho ? 'hecho' : ''}" data-id="${escapar(ej.id)}">
+        <li class="fila fila--deslizable ${resaltado === ejercicio.id ? 'fila--resaltada' : ''}">
+          <div class="fila-fondo" aria-hidden="true">${icono('dumbbell')} Cargar serie</div>
+          <div class="ejercicio ${hecho ? 'hecho' : ''}" data-id="${escapar(ejercicio.id)}">
             <button type="button" class="ejercicio-principal" data-accion="abrir"
-                    aria-label="${escapar(ej.nombre)}${conSeries ? ': cargar serie' : hecho ? ': desmarcar' : ': marcar como hecho'}">
-              <span class="ejercicio-nombre">${escapar(ej.nombre)}</span>
+                    aria-label="${escapar(ejercicio.nombre)}: cargar serie">
+              <span class="ejercicio-nombre">${escapar(ejercicio.nombre)}</span>
               <span class="ejercicio-detalle">
-                <span class="series">${escapar(objetivo(ej))}</span>
+                <span class="series">${escapar(objetivo(item))}</span>
                 ${progreso}${tecnica}
-                ${ej.nota ? `<span class="nota">${escapar(ej.nota)}</span>` : ''}
               </span>
+              ${item.notas ? `<span class="nota nota--tarjeta" lang="es">${escapar(item.notas)}</span>` : ''}
             </button>
             <button type="button" class="check" data-accion="check" aria-pressed="${hecho}"
                     aria-label="${hecho ? 'Desmarcar' : 'Marcar como hecho'}">${icono('check')}</button>
@@ -145,15 +160,19 @@ export const pantallaHoy: Pantalla = async (contenedor, ctx) => {
     fechaDeSeleccion = fechaTexto(hoy);
   }
 
-  const semana = await ctx.entrenamiento.semana(hoy);
+  const [rutina, semana] = await Promise.all([ctx.rutinas.activaCompleta(), ctx.entrenamiento.semana(hoy)]);
+  rutinaActual = rutina;
   const sesion = ctx.entrenamiento.sesionDelDia(semana, seleccionado);
   const series = sesion ? await ctx.repos.series.obtenerPorSesion(sesion.id) : [];
-  const dia = RUTINA[seleccionado];
+  const dia = rutina?.dias[seleccionado];
   const preguntarAnimo =
-    !dia.descanso && !RUTINA[indiceDia(hoy)].descanso && !ctx.entrenamiento.animoDeHoy(semana, hoy);
+    !esDescanso(dia) &&
+    !!dia?.ejercicios.length &&
+    !esDescanso(rutina?.dias[indiceDia(hoy)]) &&
+    !ctx.entrenamiento.animoDeHoy(semana, hoy);
 
   contenedor.innerHTML = `
-    ${renderCabecera(semana, sesion, hoy)}
+    ${renderCabecera(rutina, semana, sesion, hoy)}
     <main class="container contenido">
       ${preguntarAnimo ? renderAnimo() : ''}
       ${renderLista(dia, sesion, series)}
@@ -172,20 +191,16 @@ function irADia(ctx: Contexto, indice: number): void {
 }
 
 function abrir(ctx: Contexto, ejercicioId: string): void {
-  const ej = RUTINA[seleccionado].ejercicios.find((e) => e.id === ejercicioId);
-  if (!ej) return;
-  if (!llevaSeries(ej)) {
-    // Sin series (ej. cinta): tocar alterna el tachado.
-    void ctx.entrenamiento.alternarCompletado(seleccionado, ej.id).then(ctx.refrescar);
-    return;
-  }
+  const encontrado = rutinaActual?.dias[seleccionado]?.ejercicios.find((e) => e.ejercicio.id === ejercicioId);
+  if (!encontrado) return;
+  const { item, ejercicio } = encontrado;
   abrirModalSerie({
     ctx,
     dia: seleccionado,
-    ejercicio: ej,
+    ejercicio: { id: ejercicio.id, nombre: ejercicio.nombre, series: item.series, reps: item.reps, notas: item.notas },
     alCerrar: (cambios) => {
       if (cambios) {
-        resaltado = ej.id;
+        resaltado = ejercicio.id;
         ctx.refrescar();
       }
     },

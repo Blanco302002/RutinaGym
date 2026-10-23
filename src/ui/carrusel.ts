@@ -137,7 +137,8 @@ export function crearCarrusel(contenedor: HTMLElement, op: OpcionesCarrusel): Ca
   let ignorarClick = false;
 
   raiz.addEventListener('pointerdown', (e) => {
-    if (!e.isPrimary || animando || document.body.classList.contains('modal-abierto')) return;
+    const bloqueado = document.body.classList.contains('modal-abierto') || document.body.classList.contains('dialogo-abierto');
+    if (!e.isPrimary || animando || bloqueado) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     gesto = {
       id: e.pointerId,

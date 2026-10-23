@@ -1,12 +1,13 @@
-// Ajustes: tema y respaldo de datos (exportar / importar JSON).
+// Ajustes: rutinas, tema, color y respaldo de datos (exportar / importar JSON).
 
 import { crearRespaldo, leerRespaldo, restaurarRespaldo } from '../dominio/respaldo';
 import { elegirTema, temaActual, type Tema } from '../tema';
 import { TEMAS_COLOR } from '../temas-color';
 import { fechaTexto } from '../util/fechas';
-import { plural } from '../util/formato';
+import { escapar, plural } from '../util/formato';
 import { aplicarColor } from '../ui/colorApp';
 import { cabecera } from '../ui/componentes';
+import { confirmar } from '../ui/dialogo';
 import type { Contexto, Pantalla } from '../ui/contexto';
 import { icono, type NombreIcono } from '../ui/iconos';
 
@@ -53,11 +54,15 @@ async function importar(ctx: Contexto, archivo: File): Promise<void> {
 
   const actuales = await ctx.repos.respaldo.contar();
   if (actuales.sesiones + actuales.series > 0) {
-    const ok = confirm(
-      `Esto reemplaza TODOS tus datos actuales (${plural(actuales.sesiones, 'sesión', 'sesiones')}, ` +
-        `${plural(actuales.series, 'serie')}) por los del archivo ` +
-        `(${plural(respaldo.sesiones.length, 'sesión', 'sesiones')}, ${plural(respaldo.series.length, 'serie')}).\n\n¿Seguir?`,
-    );
+    const ok = await confirmar({
+      titulo: '¿Reemplazar tus datos?',
+      mensaje:
+        `Se borran tus datos actuales (${plural(actuales.sesiones, 'sesión', 'sesiones')}, ` +
+        `${plural(actuales.series, 'serie')} y tus rutinas) y se cargan los del archivo ` +
+        `(${plural(respaldo.sesiones.length, 'sesión', 'sesiones')}, ${plural(respaldo.series.length, 'serie')}).`,
+      confirmar: 'Reemplazar',
+      peligro: true,
+    });
     if (!ok) return;
   }
   try {
@@ -73,13 +78,29 @@ async function importar(ctx: Contexto, archivo: File): Promise<void> {
 }
 
 export const pantallaAjustes: Pantalla = async (contenedor, ctx) => {
-  const [{ sesiones, series }, archivo] = await Promise.all([ctx.repos.respaldo.contar(), crearArchivoRespaldo(ctx)]);
+  const [{ sesiones, series }, archivo, activa] = await Promise.all([
+    ctx.repos.respaldo.contar(),
+    crearArchivoRespaldo(ctx),
+    ctx.rutinas.activa(),
+  ]);
   const tema = temaActual();
   const color = ctx.repos.preferencias.obtener().color;
 
   contenedor.innerHTML = `
     ${cabecera({ titulo: 'Ajustes' })}
     <main class="container contenido">
+      <section class="ajuste">
+        <h2 class="seccion-titulo">Entrenamiento</h2>
+        <a class="fila-link" href="#/rutinas">
+          <span class="fila-link-icono" aria-hidden="true">${icono('dumbbell')}</span>
+          <span class="fila-link-texto">
+            <span class="fila-link-titulo">Rutinas</span>
+            <span class="fila-link-sub">${activa ? `Activa: ${escapar(activa.nombre)}` : 'Ninguna activa'}</span>
+          </span>
+          ${icono('chevronRight', 'fila-link-flecha')}
+        </a>
+      </section>
+
       <section class="ajuste">
         <h2 class="seccion-titulo">Tema</h2>
         <div class="segmentado" role="radiogroup" aria-label="Tema">
