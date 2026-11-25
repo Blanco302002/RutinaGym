@@ -26,11 +26,13 @@ import {
   pantallaRutinas,
 } from './pantallas/rutinas';
 import { pantallaSesion } from './pantallas/sesion';
+import { fechaTexto } from './util/fechas';
 
 aplicarTema();
 seguirSistema();
 
 const app = document.getElementById('app')!;
+const CRONOMETRO = indiceDe('cronometro');
 
 /** Hash actual normalizado ("" y "#/" son la Rutina). */
 function hashActual(): string {
@@ -63,6 +65,7 @@ function dibujarPantalla(contenedor: HTMLElement, ctx: Contexto, ruta: Ruta): Pr
     case 'item':
     case 'nuevo':
     case 'editarEjercicio':
+    case 'nuevoEjercicio':
       return pantallaFormEjercicio(contenedor, ctx, ruta);
   }
 }
@@ -82,7 +85,7 @@ async function iniciar(): Promise<void> {
     if ((await mostrarBienvenida(app)) === 'ejemplo') {
       await rutinas.usarEjemplo();
     } else {
-      const nueva = await rutinas.crearDesdeCero('Mi rutina', true);
+      const nueva = await rutinas.crearDesdeCero('Mi rutina', true, true);
       hashInicial = hash('rutina', nueva.id); // directo a su editor
       navegar(hashInicial, { reemplazar: true });
     }
@@ -136,11 +139,15 @@ async function iniciar(): Promise<void> {
     entrenamiento: new Entrenamiento(repos, rutinas),
     rutinas,
     // La pantalla visible se redibuja ya; las otras, fuera de la vista, para que
-    // al deslizar hacia ellas ya estén al día.
-    refrescar: () => ITEMS.forEach((_, i) => void renderizar(i, rutaDePanel[i])),
+    // al deslizar hacia ellas ya estén al día. El cronómetro nunca: su estado
+    // vive en su pantalla y se pinta solo (redibujarlo podía comerse un toque).
+    refrescar: () =>
+      ITEMS.forEach((_, i) => {
+        if (i !== CRONOMETRO) void renderizar(i, rutaDePanel[i]);
+      }),
     cambiaronDatos: () =>
       ITEMS.forEach((_, i) => {
-        if (i !== carrusel.indice()) void renderizar(i, rutaDePanel[i]);
+        if (i !== carrusel.indice() && i !== CRONOMETRO) void renderizar(i, rutaDePanel[i]);
       }),
     arriba: () => carrusel.paneles[carrusel.indice()].scrollTo({ top: 0 }),
   };
@@ -174,12 +181,16 @@ async function iniciar(): Promise<void> {
 
   alCambiarRuta(() => void mostrar(hashActual()));
 
-  // Al volver a la app (queda abierta en segundo plano) se redibuja:
-  // así cambia de día o de semana sola.
+  // Al volver a la app (queda abierta en segundo plano) se redibuja solo si
+  // cambió el día: así pasa de día o de semana sola, pero bloquear y
+  // desbloquear entre series no rehace las pantallas mientras las tocás.
+  let diaDibujado = fechaTexto(new Date());
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && !document.body.classList.contains('modal-abierto')) {
-      ctx.refrescar();
-    }
+    if (document.visibilityState !== 'visible' || document.body.classList.contains('modal-abierto')) return;
+    const hoy = fechaTexto(new Date());
+    if (hoy === diaDibujado) return;
+    diaDibujado = hoy;
+    ctx.refrescar();
   });
 
   barra.marcarActivo(ITEMS[indiceInicial].destino);

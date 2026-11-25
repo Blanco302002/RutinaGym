@@ -128,7 +128,9 @@ export const pantallaHistorial: Pantalla<RutaHistorial> = async (contenedor, ctx
       const ib = orden.indexOf(b.id);
       return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib) || a.nombre.localeCompare(b.nombre, 'es');
     });
-    cuerpo = `${buscador}<div class="resultados">${renderEjercicios(ejercicios)}</div>`;
+    const nuevo = `<a class="btn-accion btn-accion--ancho btn-accion--arriba" href="#/historial/nuevo">
+      ${icono('plus')}<span>Nuevo ejercicio</span></a>`;
+    cuerpo = `${nuevo}${buscador}<div class="resultados">${renderEjercicios(ejercicios)}</div>`;
   }
 
   contenedor.innerHTML = `

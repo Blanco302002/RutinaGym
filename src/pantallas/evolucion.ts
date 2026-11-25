@@ -31,10 +31,11 @@ export const pantallaEvolucion: Pantalla<Extract<Ruta, { pantalla: 'ejercicio' }
   const nombre = ejercicio?.nombre ?? ruta.id;
   const nombreRutina = new Map(rutinas.map((r) => [r.id, r.nombre]));
 
-  // Frases, inicial y máximo: con todo el historial, de todas las rutinas.
+  // Frases y máximo: con todo el historial, de todas las rutinas.
+  // Inicial: la 1.ª serie con la rutina del filtro (o con la activa, en "Todas").
   const frases = frasesDeProgreso(historial);
-  const resumen = resumenEjercicio(historial);
   const porId = new Map<string, Sesion>(sesiones.map((s) => [s.id, s]));
+  const activa = rutinas.find((r) => r.activa);
   const grupos = agruparPorSesion(historial).reverse();
   const opciones = rutinasParaFiltrar(grupos, porId, dondeEsta).filter((id) => nombreRutina.has(id));
   let filtro = filtroPorEjercicio.get(ruta.id);
@@ -46,14 +47,22 @@ export const pantallaEvolucion: Pantalla<Extract<Ruta, { pantalla: 'ejercicio' }
        </section>`
     : '';
 
-  const datos = resumen.maximo
-    ? `<section class="datos">
-         <div class="dato"><span class="dato-etiqueta">Inicial · ${fechaCorta(resumen.inicial!.fecha)}</span>
-           <span class="dato-valor">${numero(resumen.inicial!.serie.peso)} kg <small>×${resumen.inicial!.serie.reps}</small></span></div>
+  function datos(): string {
+    const rutinaId = filtro ?? activa?.id;
+    const resumen = resumenEjercicio(historial, undefined, { sesiones: porId, rutinaId });
+    if (!resumen.maximo) return '';
+    const deRutina = rutinaId ? nombreRutina.get(rutinaId) : undefined;
+    const inicial = resumen.inicial
+      ? `<span class="dato-etiqueta">Inicial · ${deRutina ? `${escapar(deRutina)} · ` : ''}${fechaCorta(resumen.inicial.fecha)}</span>
+         <span class="dato-valor">${numero(resumen.inicial.serie.peso)} kg <small>×${resumen.inicial.serie.reps}</small></span>`
+      : `<span class="dato-etiqueta">Inicial${deRutina ? ` · ${escapar(deRutina)}` : ''}</span>
+         <span class="dato-valor dato-valor--tenue">Sin series con esta rutina</span>`;
+    return `<section class="datos">
+         <div class="dato">${inicial}</div>
          <div class="dato"><span class="dato-etiqueta">Máximo · ${fechaCorta(resumen.maximo.fecha)}</span>
            <span class="dato-valor">${numero(resumen.maximo.peso)} kg <small>×${resumen.maximo.reps}</small></span></div>
-       </section>`
-    : '';
+       </section>`;
+  }
 
   function chips(): string {
     if (!opciones.length) return '';
@@ -94,7 +103,7 @@ export const pantallaEvolucion: Pantalla<Extract<Ruta, { pantalla: 'ejercicio' }
   contenedor.innerHTML = `
     ${cabecera({ titulo: nombre, volver: true })}
     <main class="container contenido">
-      ${historial.length ? `${bloqueFrases}${datos}` : vacio('Sin registros', 'Todavía no cargaste series de este ejercicio.')}
+      ${historial.length ? `${bloqueFrases}<div data-datos>${datos()}</div>` : vacio('Sin registros', 'Todavía no cargaste series de este ejercicio.')}
       ${editar}
       ${
         historial.length
@@ -113,6 +122,8 @@ export const pantallaEvolucion: Pantalla<Extract<Ruta, { pantalla: 'ejercicio' }
       filtroPorEjercicio.set(ruta.id, filtro);
       contenedor.querySelector('[data-filtros]')!.innerHTML = chips();
       contenedor.querySelector('[data-lista]')!.innerHTML = lista();
+      const bloqueDatos = contenedor.querySelector('[data-datos]');
+      if (bloqueDatos) bloqueDatos.innerHTML = datos();
     }
   });
 };

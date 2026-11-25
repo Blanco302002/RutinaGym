@@ -42,6 +42,12 @@ export function fechaCorta(texto: string): string {
   return `${f.getDate()} ${MESES[f.getMonth()]}`;
 }
 
+/** "miércoles 18 nov" (para ir después de otra palabra: "Última vez · miércoles 18 nov"). */
+export function fechaConDia(texto: string): string {
+  const f = deTexto(texto);
+  return `${DIAS[f.getDay()].toLowerCase()} ${f.getDate()} ${MESES[f.getMonth()]}`;
+}
+
 /** "Lunes 19 oct" (agrega el año si no es el actual). */
 export function fechaLarga(texto: string, hoy = new Date()): string {
   const f = deTexto(texto);

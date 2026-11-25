@@ -42,7 +42,7 @@ describe('Repositorios y carga de series', () => {
     await entrenamiento.guardarSerie(LUNES, 'press_plano', 60, 8, dia(2026, 11, 2));
 
     const resumen = resumenEjercicio(await repos.series.obtenerHistorial('press_plano'));
-    expect(resumen.inicial?.serie).toMatchObject({ peso: 45, reps: 8 }); // la más pesada del primer día
+    expect(resumen.inicial?.serie).toMatchObject({ peso: 40, reps: 10 }); // la primera serie registrada
     expect(resumen.maximo).toMatchObject({ peso: 60, reps: 8 }); // a igual peso, gana la de más reps
   });
 

@@ -145,11 +145,46 @@ export const pantallaCronometro: Pantalla = async (contenedor, ctx) => {
     animar();
   }
 
-  botones.addEventListener('click', (e) => {
-    const accion = (e.target as HTMLElement).closest<HTMLElement>('[data-accion]')?.dataset.accion;
+  function accionar(accion?: string): void {
     if (accion === 'reiniciar') cambiar(reiniciar());
     if (accion === 'principal') cambiar(estado.corriendo ? pausar(estado) : empezar(estado));
+  }
+
+  // Se activa al levantar el dedo sobre el mismo botón donde se apoyó (sin
+  // esperar el click, que en el teléfono a veces no llega o llega tarde). Si el
+  // dedo se movió (ej. deslizar entre pantallas), no cuenta.
+  let toque: { boton: HTMLElement; x: number; y: number } | undefined;
+  let ultimoPorToque = 0;
+  botones.addEventListener('pointerdown', (e) => {
+    const boton = (e.target as HTMLElement).closest<HTMLElement>('[data-accion]');
+    toque = boton ? { boton, x: e.clientX, y: e.clientY } : undefined;
   });
+  botones.addEventListener('pointercancel', () => (toque = undefined));
+  botones.addEventListener('pointerup', (e) => {
+    const inicio = toque;
+    toque = undefined;
+    if (!inicio || Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) > 12) return;
+    const boton = (e.target as HTMLElement).closest<HTMLElement>('[data-accion]');
+    if (boton !== inicio.boton) return;
+    ultimoPorToque = Date.now();
+    accionar(boton.dataset.accion);
+  });
+  // Teclado / lector de pantalla. El click que llega justo después de un toque se ignora.
+  botones.addEventListener('click', (e) => {
+    if (Date.now() - ultimoPorToque < 600) return;
+    accionar((e.target as HTMLElement).closest<HTMLElement>('[data-accion]')?.dataset.accion);
+  });
+
+  // Al volver a la app se relee el estado guardado y se repinta (sin rehacer la pantalla).
+  const alVolver = () => {
+    if (!contenedor.isConnected) return document.removeEventListener('visibilitychange', alVolver);
+    if (document.visibilityState !== 'visible') return;
+    estado = ctx.repos.cronometro.obtener();
+    pintarBotones();
+    cancelAnimationFrame(cuadro);
+    animar();
+  };
+  document.addEventListener('visibilitychange', alVolver);
 
   pintarBotones();
   pintarTiempo();

@@ -122,15 +122,19 @@ export class GestorRutinas {
     return this.crearDesdeSemilla('Rutina de ejemplo', true);
   }
 
-  /** Bienvenida → "Crear mi rutina desde cero" (y también "+ Nueva rutina → Empezar de cero"). */
-  async crearDesdeCero(nombre = 'Mi rutina', activa = false): Promise<Rutina> {
+  /**
+   * Bienvenida → "Crear mi rutina desde cero" (y también "+ Nueva rutina → Empezar de cero").
+   * `limpiar`: solo en la bienvenida, para sacar restos de catálogos viejos sin uso.
+   * Desde Rutinas no se limpia: borraría los ejercicios creados desde Historial.
+   */
+  async crearDesdeCero(nombre = 'Mi rutina', activa = false, limpiar = false): Promise<Rutina> {
     const rutina: Rutina = { id: nuevoId('rutina'), nombre, activa: false, creada: Date.now() };
     await this.repos.rutinas.guardar(rutina);
     for (let d = 0; d < 7; d++) {
       await this.repos.dias.guardar({ id: `${rutina.id}_${d}`, rutinaId: rutina.id, dia: d, tipo: 'descanso', nombre: 'Descanso' });
     }
     if (activa) await this.activar(rutina.id);
-    await this.limpiarHuerfanos();
+    if (limpiar) await this.limpiarHuerfanos((await this.repos.ejercicios.listar()).map((e) => e.id));
     return (await this.repos.rutinas.obtener(rutina.id))!;
   }
 
@@ -270,8 +274,10 @@ export class GestorRutinas {
     if (!rutina) return undefined;
     if (rutinas.length === 1) return 'No se puede eliminar la única rutina.';
     if (rutina.activa) return 'No se puede eliminar la rutina activa. Activá otra primero.';
+    // Solo se revisan los ejercicios que estaban en esta rutina.
+    const usados = (await this.repos.ejerciciosEnRutina.listarPorRutina(rutinaId)).map((i) => i.ejercicioId);
     await this.repos.rutinas.eliminar(rutinaId);
-    await this.limpiarHuerfanos();
+    await this.limpiarHuerfanos([...new Set(usados)]);
     return undefined;
   }
 
@@ -398,9 +404,34 @@ export class GestorRutinas {
     return true;
   }
 
-  /** Limpia los ejercicios que quedaron sin uso (ej. al borrar una rutina). */
-  async limpiarHuerfanos(): Promise<void> {
-    for (const e of await this.repos.ejercicios.listar()) await this.borrarSiSobra(e.id);
+  /** De estos ejercicios, borra los que quedaron sin historial y sin rutina (ej. al borrar una rutina). */
+  async limpiarHuerfanos(ejercicioIds: string[]): Promise<void> {
+    for (const id of ejercicioIds) await this.borrarSiSobra(id);
+  }
+
+  /**
+   * Crea un ejercicio suelto, sin agregarlo a ninguna rutina (Historial →
+   * Ejercicios → "+ Nuevo ejercicio"). Después se agrega a un día desde Rutinas.
+   */
+  async crearEjercicio(nombre: string): Promise<{ error?: string; ejercicio?: Ejercicio }> {
+    const error = validarNombre(nombre);
+    if (error) return { error };
+    if (await this.buscarPorNombre(nombre)) return { error: 'Ya existe un ejercicio con ese nombre.' };
+    const ejercicio: Ejercicio = { id: await this.idLibre(idDesdeNombre(nombre)), nombre: nombre.trim() };
+    await this.repos.ejercicios.guardar(ejercicio);
+    return { ejercicio };
+  }
+
+  /**
+   * Eliminar desde Historial: lo saca de todas las rutinas. Si tiene series
+   * registradas se conserva (sigue en Historial con todo su historial); si no,
+   * se borra del todo.
+   */
+  async eliminarEjercicio(ejercicioId: string): Promise<'conservado' | 'borrado'> {
+    for (const item of await this.repos.ejerciciosEnRutina.listarPorEjercicio(ejercicioId)) {
+      await this.repos.ejerciciosEnRutina.eliminar(item.id);
+    }
+    return (await this.borrarSiSobra(ejercicioId)) ? 'borrado' : 'conservado';
   }
 
   private async idLibre(base: string): Promise<string> {

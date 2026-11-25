@@ -2,9 +2,9 @@
 
 import type { Serie, Tecnica } from '../datos';
 import type { EstadoDeCarga } from '../dominio/entrenamiento';
-import { precarga, resumenEjercicio } from '../dominio/estadisticas';
+import { precarga, resumenEjercicio, type OpcionesResumen } from '../dominio/estadisticas';
 import { objetivo, repsMinimas } from '../dominio/rutinas';
-import { fechaCorta } from '../util/fechas';
+import { fechaConDia } from '../util/fechas';
 import { escapar, numero } from '../util/formato';
 import { NOMBRE_TECNICA } from './componentes';
 import type { Contexto } from './contexto';
@@ -61,8 +61,16 @@ export function abrirModalSerie(op: OpcionesModal): void {
     op.alCerrar(cambios);
   }
 
+  // Para el peso inicial: la 1.ª serie hecha con la rutina activa.
+  let opcionesResumen: OpcionesResumen | undefined;
+
   async function cargar(): Promise<void> {
-    const estado = await ctx.entrenamiento.estadoDeCarga(dia, ejercicio.id);
+    const [estado, sesiones, activa] = await Promise.all([
+      ctx.entrenamiento.estadoDeCarga(dia, ejercicio.id),
+      ctx.repos.sesiones.listar(),
+      ctx.rutinas.activa(),
+    ]);
+    opcionesResumen = { sesiones: new Map(sesiones.map((s) => [s.id, s])), rutinaId: activa?.id };
     sesionId = estado.sesionId;
     // Ya cargó todas las series pero no calificó: directo a la técnica.
     if (!estado.completado && estado.deHoy.length >= total) {
@@ -86,13 +94,13 @@ export function abrirModalSerie(op: OpcionesModal): void {
   }
 
   function dibujarCarga({ historial, deHoy, completado, numero: numeroSerie }: EstadoDeCarga): void {
-    const resumen = resumenEjercicio(historial, sesionId);
+    const resumen = resumenEjercicio(historial, sesionId, opcionesResumen);
     const valores = precarga(historial, sesionId, numeroSerie, repsMinimas(ejercicio.reps) ?? 10);
     const extra = numeroSerie > total;
 
     const ultimaVez = resumen.ultimaVez
       ? `<div class="dato dato--ancho">
-           <span class="dato-etiqueta">Última vez · ${fechaCorta(resumen.ultimaVez.fecha)}</span>
+           <span class="dato-etiqueta">Última vez · ${fechaConDia(resumen.ultimaVez.fecha)}</span>
            <span class="chips">${resumen.ultimaVez.series
              .map((s) => `<span class="chip"><small>${s.numero}</small>${serieCorta(s)}</span>`)
              .join('')}</span>
@@ -106,7 +114,11 @@ export function abrirModalSerie(op: OpcionesModal): void {
         <section class="datos" aria-label="Referencias">
           <div class="dato">
             <span class="dato-etiqueta">Inicial</span>
-            <span class="dato-valor">${resumen.inicial ? `${numero(resumen.inicial.serie.peso)} kg` : '—'}</span>
+            <span class="dato-valor">${
+              resumen.inicial
+                ? `${numero(resumen.inicial.serie.peso)} kg <small>×${resumen.inicial.serie.reps}</small>`
+                : '—'
+            }</span>
           </div>
           <div class="dato">
             <span class="dato-etiqueta">Máximo</span>

@@ -429,9 +429,12 @@ export const pantallaAgregarEjercicio: Pantalla<RutaDe<'agregar'>> = async (cont
 type ModoFormulario =
   | { modo: 'editar'; item: EjercicioEnRutina; ejercicio: Ejercicio; volverA: string }
   | { modo: 'nuevo'; diaId: string; ejercicio?: Ejercicio; nombre: string; base?: EjercicioEnRutina }
-  | { modo: 'soloNombre'; ejercicio: Ejercicio };
+  | { modo: 'soloNombre'; ejercicio: Ejercicio }
+  // Historial → Ejercicios → "+ Nuevo ejercicio": solo el nombre, sin rutina.
+  | { modo: 'crear' };
 
 async function resolverModo(ctx: Contexto, ruta: Ruta): Promise<ModoFormulario | undefined> {
+  if (ruta.pantalla === 'nuevoEjercicio') return { modo: 'crear' };
   if (ruta.pantalla === 'item') {
     const item = await ctx.repos.ejerciciosEnRutina.obtener(ruta.id);
     const ejercicio = item && (await ctx.repos.ejercicios.obtener(item.ejercicioId));
@@ -463,13 +466,31 @@ export const pantallaFormEjercicio: Pantalla = async (contenedor, ctx, ruta) => 
   const atrasPorDefecto = ruta.pantalla === 'editarEjercicio' ? hash('ejercicio', ruta.id) : '#/rutinas';
   if (!m) return noEncontrado(contenedor, 'Ejercicio', atrasPorDefecto);
 
+  // Entrando desde Historial (botón Editar), "Eliminar" saca el ejercicio de todas las rutinas.
+  const desdeHistorial = ruta.pantalla === 'editarEjercicio';
   const atras =
-    m.modo === 'editar' ? m.volverA : m.modo === 'nuevo' ? hash('agregar', m.diaId) : hash('ejercicio', m.ejercicio.id);
-  const nombreOriginal = m.modo === 'nuevo' ? (m.ejercicio?.nombre ?? '') : m.ejercicio.nombre;
+    m.modo === 'crear'
+      ? '#/historial/ejercicios'
+      : m.modo === 'editar'
+        ? m.volverA
+        : m.modo === 'nuevo'
+          ? hash('agregar', m.diaId)
+          : hash('ejercicio', m.ejercicio.id);
+  const ejercicioActual = m.modo === 'editar' || m.modo === 'soloNombre' ? m.ejercicio : undefined;
+  const nombreOriginal = m.modo === 'nuevo' ? (m.ejercicio?.nombre ?? '') : (ejercicioActual?.nombre ?? '');
   const base = m.modo === 'editar' ? m.item : m.modo === 'nuevo' ? m.base : undefined;
-  const nombreInicial = m.modo === 'nuevo' ? m.nombre : m.ejercicio.nombre;
-  const titulo = m.modo === 'nuevo' ? 'Nuevo ejercicio' : 'Editar ejercicio';
-  const existe = m.modo !== 'nuevo' || !!m.ejercicio;
+  const nombreInicial = m.modo === 'nuevo' ? m.nombre : nombreOriginal;
+  const titulo = m.modo === 'nuevo' || m.modo === 'crear' ? 'Nuevo ejercicio' : 'Editar ejercicio';
+  const existe = m.modo === 'nuevo' ? !!m.ejercicio : m.modo !== 'crear';
+  const soloNombre = m.modo === 'soloNombre' || m.modo === 'crear';
+
+  const botonEliminar = desdeHistorial
+    ? `<button type="button" class="btn-peligro" data-accion="eliminar-todo">${icono('trash')}<span>Eliminar ejercicio</span></button>
+       <p class="campo-ayuda">Se saca de todas las rutinas. Si tiene series registradas, su historial se conserva.</p>`
+    : m.modo === 'editar'
+      ? `<button type="button" class="btn-peligro" data-accion="eliminar">${icono('trash')}<span>Eliminar</span></button>
+         <p class="campo-ayuda">Eliminar lo saca de este día de la rutina. Si tiene series registradas, su historial se conserva.</p>`
+      : '';
 
   contenedor.innerHTML = `
     ${cabecera({ titulo, atras: true })}
@@ -477,7 +498,9 @@ export const pantallaFormEjercicio: Pantalla = async (contenedor, ctx, ruta) => 
       ${
         m.modo === 'soloNombre'
           ? `<p class="aviso">${icono('pencil')}<span>Este ejercicio no está en la rutina activa: solo podés cambiarle el nombre.</span></p>`
-          : ''
+          : m.modo === 'crear'
+            ? `<p class="campo-ayuda">Se crea en tu lista de ejercicios. Para entrenarlo, agregalo a un día desde Ajustes → Rutinas.</p>`
+            : ''
       }
       <label class="campo">
         <span class="campo-etiqueta">Nombre</span>
@@ -489,7 +512,7 @@ export const pantallaFormEjercicio: Pantalla = async (contenedor, ctx, ruta) => 
       </label>
 
       ${
-        m.modo === 'soloNombre'
+        soloNombre
           ? ''
           : `
         <div class="campo" data-campo-series>
@@ -512,12 +535,7 @@ export const pantallaFormEjercicio: Pantalla = async (contenedor, ctx, ruta) => 
 
       <div class="acciones-pie">
         <button type="button" class="btn-principal" data-accion="guardar">${icono('check')}<span>Guardar</span></button>
-        ${
-          m.modo === 'editar'
-            ? `<button type="button" class="btn-peligro" data-accion="eliminar">${icono('trash')}<span>Eliminar</span></button>
-               <p class="campo-ayuda">Eliminar lo saca de este día de la rutina. Si tiene series registradas, su historial se conserva.</p>`
-            : ''
-        }
+        ${botonEliminar}
       </div>
     </main>`;
 
@@ -527,9 +545,8 @@ export const pantallaFormEjercicio: Pantalla = async (contenedor, ctx, ruta) => 
   const inputNombre = campo<HTMLInputElement>('nombre')!;
   const inputReps = campo<HTMLInputElement>('reps');
   const inputNotas = campo<HTMLTextAreaElement>('notas');
-  const stepperSeries =
-    m.modo === 'soloNombre'
-      ? undefined
+  const stepperSeries = soloNombre
+    ? undefined
       : crearStepper({
           etiqueta: 'Series',
           valor: base?.series ?? 3,
@@ -569,7 +586,12 @@ export const pantallaFormEjercicio: Pantalla = async (contenedor, ctx, ruta) => 
         reps: inputReps?.value ?? '',
         notas: inputNotas?.value ?? '',
       };
-      if (m.modo === 'soloNombre') {
+      if (m.modo === 'crear') {
+        const { error: problema } = await ctx.rutinas.crearEjercicio(datos.nombre);
+        if (problema) return mostrarErrores({ nombre: problema });
+        ctx.cambiaronDatos();
+        volver(atras);
+      } else if (m.modo === 'soloNombre') {
         const problema = await ctx.rutinas.renombrarEjercicio(m.ejercicio.id, datos.nombre);
         if (problema) return mostrarErrores({ nombre: problema });
         ctx.cambiaronDatos();
@@ -595,9 +617,18 @@ export const pantallaFormEjercicio: Pantalla = async (contenedor, ctx, ruta) => 
       if (!ok) return;
       await ctx.rutinas.quitarEjercicio(m.item.id);
       ctx.cambiaronDatos();
-      // Desde el editor del día vuelve al día; desde Historial, a la evolución.
-      if (m.volverA.startsWith('#/dia')) volverA(m.volverA);
-      else volver(atras);
+      volverA(m.volverA);
+    } else if (accion === 'eliminar-todo' && ejercicioActual) {
+      const ok = await confirmar({
+        titulo: `¿Eliminar "${ejercicioActual.nombre}"?`,
+        mensaje: 'Se saca de todas las rutinas. Si tiene series registradas, su historial se conserva.',
+        confirmar: 'Eliminar',
+        peligro: true,
+      });
+      if (!ok) return;
+      await ctx.rutinas.eliminarEjercicio(ejercicioActual.id);
+      ctx.cambiaronDatos();
+      volverA('#/historial/ejercicios'); // saltea la evolución
     }
   });
 };

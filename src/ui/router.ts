@@ -9,6 +9,7 @@ export type Ruta =
   | { pantalla: 'sesion'; id: string }
   | { pantalla: 'ejercicio'; id: string }
   | { pantalla: 'editarEjercicio'; id: string }
+  | { pantalla: 'nuevoEjercicio' }
   | { pantalla: 'cronometro' }
   | { pantalla: 'ajustes' }
   // Gestión de rutinas (dentro de Ajustes)
@@ -34,6 +35,7 @@ export function leerRuta(hash = location.hash): Ruta {
   switch (seccion) {
     case 'historial':
       if (a === 'editar' && b) return { pantalla: 'editarEjercicio', id: b };
+      if (a === 'nuevo') return { pantalla: 'nuevoEjercicio' };
       return { pantalla: 'historial', pestana: a === 'ejercicios' ? 'ejercicios' : 'sesiones' };
     case 'sesion':
       return a ? { pantalla: 'sesion', id: a } : { pantalla: 'historial', pestana: 'sesiones' };
@@ -87,7 +89,9 @@ export function destinoDe(ruta: Ruta): Destino {
 
 /** Pantallas de edición: ahí no se cambia de pantalla deslizando. */
 export function esEditor(ruta: Ruta): boolean {
-  return ['rutinas', 'rutina', 'dia', 'agregar', 'item', 'nuevo', 'editarEjercicio'].includes(ruta.pantalla);
+  return ['rutinas', 'rutina', 'dia', 'agregar', 'item', 'nuevo', 'editarEjercicio', 'nuevoEjercicio'].includes(
+    ruta.pantalla,
+  );
 }
 
 // Pila propia para saber si "volver" tiene adónde ir (en la app instalada no

@@ -60,6 +60,19 @@ export function destinoAlSoltar(
   return lejos || rapido ? vecino : actual;
 }
 
+/**
+ * Desplazamiento respecto de la pantalla `actual`, a partir de la posición
+ * real del carril (para agarrarlo a mitad de una animación).
+ */
+export function desplazamientoActual(posicionCarril: number, actual: number, ancho: number): number {
+  return posicionCarril + actual * ancho;
+}
+
+/** La pantalla que más se ve con el carril en esa posición. */
+export function pantallaMasCercana(posicionCarril: number, ancho: number, cantidad: number): number {
+  return Math.min(cantidad - 1, Math.max(0, Math.round(-posicionCarril / ancho)));
+}
+
 export function crearCarrusel(contenedor: HTMLElement, op: OpcionesCarrusel): Carrusel {
   const raiz = document.createElement('div');
   raiz.className = 'carrusel';
@@ -75,8 +88,11 @@ export function crearCarrusel(contenedor: HTMLElement, op: OpcionesCarrusel): Ca
   contenedor.append(raiz);
 
   let actual = op.inicial;
+  /** La pantalla que la app ya conoce (para avisarle solo cuando cambia). */
+  let informado = op.inicial;
   let animando = false;
   let fin: number | undefined;
+  let alLlegar: (() => void) | undefined;
   const quietos: (() => void)[] = [];
 
   const ancho = () => raiz.clientWidth || window.innerWidth;
@@ -95,24 +111,41 @@ export function crearCarrusel(contenedor: HTMLElement, op: OpcionesCarrusel): Ca
     });
   }
 
+  /** Corta la espera de una animación en curso (la promesa igual se cumple). */
+  function cortarAnimacion(): void {
+    window.clearTimeout(fin);
+    const pendiente = alLlegar;
+    alLlegar = undefined;
+    pendiente?.();
+  }
+
   function terminar(): void {
     animando = false;
     marcarPaneles();
+    // Se avisa la pantalla final una sola vez, cuando el carrusel quedó quieto.
+    if (actual !== informado) {
+      informado = actual;
+      op.alCambiar(actual);
+    }
     for (const cb of quietos) cb();
   }
 
   function animarA(indice: number): Promise<void> {
-    window.clearTimeout(fin);
+    cortarAnimacion();
     const desde = actual;
     actual = indice;
     // Mientras se mueve, se ven las dos pantallas (para el cronómetro, que se pinta solo si está visible).
     paneles[desde].dataset.visible = 'true';
     paneles[indice].dataset.visible = 'true';
+    // La de destino ya recibe toques mientras llega (antes había que esperar la animación).
+    paneles[indice].inert = false;
     animando = true;
     pintar(0, true);
     return new Promise((resolve) => {
+      alLlegar = resolve;
       // setTimeout y no transitionend: si no hubo movimiento, transitionend no llega.
       fin = window.setTimeout(() => {
+        alLlegar = undefined;
         terminar();
         resolve();
       }, DURACION + 30);
@@ -121,64 +154,74 @@ export function crearCarrusel(contenedor: HTMLElement, op: OpcionesCarrusel): Ca
 
   // ── Gesto ────────────────────────────────────────────────
 
+  // El gesto se arma con touch events en el teléfono (con preventDefault en
+  // cuanto se sabe que es horizontal: Safari no puede cancelarlo a mitad de
+  // camino) y con pointer events solo para el mouse, en la compu.
+
   interface Gesto {
-    id: number;
     x0: number;
     y0: number;
     origen: Element;
     eje: 'pendiente' | 'horizontal' | 'ignorar';
     base: number; // clientX desde donde se mide (el punto donde se decidió el eje)
+    /** Dónde estaba el carril al tocar (si se agarró a mitad de una animación). */
+    inicial: number;
     desplazamiento: number;
     muestras: { x: number; t: number }[];
+    /** Se cortó una animación al tocar: si el gesto no sigue, hay que terminarla. */
+    interrumpido: boolean;
   }
 
   let gesto: Gesto | null = null;
   let cuadro = 0;
   let ignorarClick = false;
 
-  raiz.addEventListener('pointerdown', (e) => {
-    const bloqueado = document.body.classList.contains('modal-abierto') || document.body.classList.contains('dialogo-abierto');
-    if (!e.isPrimary || animando || bloqueado) return;
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    gesto = {
-      id: e.pointerId,
-      x0: e.clientX,
-      y0: e.clientY,
-      origen: e.target as Element,
-      eje: 'pendiente',
-      base: e.clientX,
-      desplazamiento: 0,
-      muestras: [{ x: e.clientX, t: e.timeStamp }],
-    };
-  });
+  function bloqueado(): boolean {
+    return document.body.classList.contains('modal-abierto') || document.body.classList.contains('dialogo-abierto');
+  }
 
-  raiz.addEventListener('pointermove', (e) => {
-    if (!gesto || e.pointerId !== gesto.id || gesto.eje === 'ignorar') return;
-    const dx = e.clientX - gesto.x0;
-    const dy = e.clientY - gesto.y0;
+  function empezar(x: number, y: number, origen: Element, t: number): void {
+    if (bloqueado()) return;
+    let inicial = 0;
+    let interrumpido = false;
+    if (animando) {
+      // Agarrarlo en movimiento: se frena donde está y el dedo sigue desde ahí,
+      // midiendo desde la pantalla que más se ve en ese momento.
+      cortarAnimacion();
+      const posicion = new DOMMatrix(getComputedStyle(carril).transform).m41;
+      actual = pantallaMasCercana(posicion, ancho(), op.cantidad);
+      inicial = desplazamientoActual(posicion, actual, ancho());
+      pintar(inicial, false);
+      interrumpido = true;
+    }
+    gesto = { x0: x, y0: y, origen, eje: 'pendiente', base: x, inicial, desplazamiento: inicial, muestras: [{ x, t }], interrumpido };
+  }
+
+  /** Devuelve true si el gesto es horizontal (el que llama evita el scroll). */
+  function mover(x: number, y: number, t: number): boolean {
+    if (!gesto || gesto.eje === 'ignorar') return false;
+    const dx = x - gesto.x0;
+    const dy = y - gesto.y0;
 
     if (gesto.eje === 'pendiente') {
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < UMBRAL_EJE) return;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < UMBRAL_EJE) return false;
       const horizontal = Math.abs(dx) > Math.abs(dy);
       const direccion: Direccion = dx < 0 ? 'izquierda' : 'derecha';
       if (!horizontal || !op.permitir(direccion, gesto.origen, actual)) {
         gesto.eje = 'ignorar'; // vertical: que scrollee normal
-        return;
+        if (gesto.interrumpido) void animarA(actual);
+        return false;
       }
       gesto.eje = 'horizontal';
-      gesto.base = e.clientX; // arranca a seguir desde acá: sin salto
-      try {
-        raiz.setPointerCapture(e.pointerId); // seguir recibiendo el gesto aunque el dedo salga
-      } catch {
-        // Puntero ya liberado: no pasa nada, se sigue igual.
-      }
+      gesto.base = x; // arranca a seguir desde acá: sin salto
+      animando = false;
       raiz.classList.add('carrusel--arrastrando');
       paneles.forEach((p) => (p.dataset.visible = 'true'));
     }
 
-    gesto.desplazamiento = elastico(e.clientX - gesto.base, actual, op.cantidad);
-    gesto.muestras.push({ x: e.clientX, t: e.timeStamp });
-    while (gesto.muestras.length > 2 && e.timeStamp - gesto.muestras[0].t > 100) gesto.muestras.shift();
+    gesto.desplazamiento = elastico(gesto.inicial + x - gesto.base, actual, op.cantidad);
+    gesto.muestras.push({ x, t });
+    while (gesto.muestras.length > 2 && t - gesto.muestras[0].t > 100) gesto.muestras.shift();
 
     if (!cuadro) {
       cuadro = requestAnimationFrame(() => {
@@ -186,13 +229,18 @@ export function crearCarrusel(contenedor: HTMLElement, op: OpcionesCarrusel): Ca
         if (gesto?.eje === 'horizontal') pintar(gesto.desplazamiento, false);
       });
     }
-  });
+    return true;
+  }
 
-  function soltar(e: PointerEvent, cancelado: boolean): void {
-    if (!gesto || e.pointerId !== gesto.id) return;
+  function soltar(cancelado: boolean): void {
+    if (!gesto) return;
     const g = gesto;
     gesto = null;
-    if (g.eje !== 'horizontal') return;
+    if (g.eje !== 'horizontal') {
+      // Un toque que frenó una animación: se termina de llegar a la pantalla.
+      if (g.interrumpido && g.eje === 'pendiente') void animarA(actual);
+      return;
+    }
 
     cancelAnimationFrame(cuadro);
     cuadro = 0;
@@ -208,12 +256,58 @@ export function crearCarrusel(contenedor: HTMLElement, op: OpcionesCarrusel): Ca
       : destinoAlSoltar(g.desplazamiento, velocidad, ancho(), actual, op.cantidad);
 
     // La animación final sale desde donde quedó el dedo: el carril ya está ahí.
-    if (destino !== actual) void animarA(destino).then(() => op.alCambiar(destino));
-    else void animarA(actual);
+    // Al terminar, terminar() avisa la pantalla nueva (si cambió).
+    void animarA(destino);
   }
 
-  raiz.addEventListener('pointerup', (e) => soltar(e, false));
-  raiz.addEventListener('pointercancel', (e) => soltar(e, true));
+  // Teléfono: touch events.
+  raiz.addEventListener(
+    'touchstart',
+    (e) => {
+      if (e.touches.length !== 1) {
+        if (gesto) soltar(true);
+        return;
+      }
+      const t = e.touches[0];
+      empezar(t.clientX, t.clientY, e.target as Element, e.timeStamp);
+    },
+    { passive: true },
+  );
+  raiz.addEventListener(
+    'touchmove',
+    (e) => {
+      const t = e.touches[0];
+      if (t && mover(t.clientX, t.clientY, e.timeStamp) && e.cancelable) e.preventDefault();
+    },
+    { passive: false },
+  );
+  raiz.addEventListener('touchend', () => soltar(false));
+  raiz.addEventListener('touchcancel', () => soltar(true));
+
+  // Compu: el mouse, con pointer events.
+  let punteroMouse: number | undefined;
+  raiz.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    punteroMouse = e.pointerId;
+    empezar(e.clientX, e.clientY, e.target as Element, e.timeStamp);
+  });
+  raiz.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== punteroMouse) return;
+    if (mover(e.clientX, e.clientY, e.timeStamp) && !raiz.hasPointerCapture(e.pointerId)) {
+      try {
+        raiz.setPointerCapture(e.pointerId);
+      } catch {
+        // Puntero ya liberado: se sigue igual.
+      }
+    }
+  });
+  const soltarMouse = (e: PointerEvent, cancelado: boolean) => {
+    if (e.pointerId !== punteroMouse) return;
+    punteroMouse = undefined;
+    soltar(cancelado);
+  };
+  raiz.addEventListener('pointerup', (e) => soltarMouse(e, false));
+  raiz.addEventListener('pointercancel', (e) => soltarMouse(e, true));
 
   // Que soltar después de arrastrar no "toque" el botón que quedó abajo.
   raiz.addEventListener(
@@ -236,6 +330,7 @@ export function crearCarrusel(contenedor: HTMLElement, op: OpcionesCarrusel): Ca
     paneles,
     indice: () => actual,
     irA: (indice, animar = true) => {
+      informado = indice; // lo pide la app: ya lo sabe, no hace falta avisarle
       if (indice === actual && !animando) return Promise.resolve();
       if (!animar) {
         actual = indice;

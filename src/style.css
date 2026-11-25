@@ -1591,6 +1591,10 @@ svg,
   margin-top: 14px;
 }
 
+.btn-accion--arriba {
+  margin: 0 0 14px;
+}
+
 .btn-peligro {
   display: flex;
   align-items: center;

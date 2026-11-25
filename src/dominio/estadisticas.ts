@@ -41,21 +41,38 @@ export function volumen(series: Serie[]): number {
 }
 
 export interface ResumenEjercicio {
-  /** Serie más pesada de la primera sesión registrada. */
+  /** Primera serie registrada (con la rutina pedida, si se indica una). */
   inicial?: { serie: Serie; fecha: string };
-  /** Mejor serie de toda la historia. */
+  /** Mejor serie de toda la historia, de todas las rutinas. */
   maximo?: Serie;
   /** La sesión anterior a la actual. */
   ultimaVez?: SesionDeEjercicio;
 }
 
-export function resumenEjercicio(historial: Serie[], sesionActualId?: string): ResumenEjercicio {
+export interface OpcionesResumen {
+  /** Sesiones por id, para saber con qué rutina se hizo cada serie. */
+  sesiones: Map<string, Sesion>;
+  /** El inicial sale solo de las series hechas con esta rutina. */
+  rutinaId?: string;
+}
+
+function primeroEnElTiempo(a: Serie, b: Serie): number {
+  return a.fecha.localeCompare(b.fecha) || a.creada - b.creada || a.numero - b.numero;
+}
+
+export function resumenEjercicio(
+  historial: Serie[],
+  sesionActualId?: string,
+  opciones?: OpcionesResumen,
+): ResumenEjercicio {
   const grupos = agruparPorSesion(historial);
   const anteriores = grupos.filter((g) => g.sesionId !== sesionActualId);
-  const primera = grupos[0];
-  const mejorInicial = primera && mejorSerie(primera.series);
+  const deLaRutina = opciones?.rutinaId
+    ? historial.filter((s) => opciones.sesiones.get(s.sesionId)?.rutinaId === opciones.rutinaId)
+    : historial;
+  const primera = [...deLaRutina].sort(primeroEnElTiempo)[0];
   return {
-    inicial: mejorInicial && { serie: mejorInicial, fecha: primera.fecha },
+    inicial: primera && { serie: primera, fecha: primera.fecha },
     maximo: mejorSerie(historial),
     ultimaVez: anteriores.at(-1),
   };
